@@ -1,6 +1,6 @@
 # libcosy
 
-ROSY port of COSY INFINITY 10.2 — the canonical library for [Rosy](https://github.com/rosy-team/rosy), a scientific programming language for beam physics and differential algebra.
+Rosy port of COSY INFINITY 10.2 — the canonical library for [Rosy](https://github.com/rosy-team/rosy), a scientific programming language for beam physics and differential algebra.
 
 ## Use
 
