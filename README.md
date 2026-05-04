@@ -29,4 +29,12 @@ The `MODULE GITHUB` directive fetches the tagged source tarball from this repo o
 
 ## Versioning
 
-`Rosy.toml` declares `rosy_version` as a [semver requirement](https://semver.org) the running Rosy transpiler must satisfy. Bumping `[package].version` on `master` triggers an auto-Release via `.github/workflows/release.yml`.
+`Rosy.toml` declares `rosy_version` as a [semver requirement](https://semver.org) the running Rosy transpiler must satisfy.
+
+## Releasing a new version
+
+1. Bump `[package].version` in `Rosy.toml` (semver: patch for fixes, minor for additions, major for breaks).
+2. Commit and push to `master`.
+3. `.github/workflows/release.yml` extracts the new version, tags `v<version>`, and publishes a GitHub Release with auto-generated notes. The source tarball is auto-attached and becomes the artifact `MODULE GITHUB ... "v<version>"` resolves against.
+
+The workflow only fires when `Rosy.toml` is in the diff, and silently skips if the tag already exists — so non-version commits and re-pushes are no-ops.
