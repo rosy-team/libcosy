@@ -14,6 +14,13 @@
 BEGIN;
 
 INCLUDE '../globals.rosy';
+INCLUDE '../helpers/math.rosy';
+INCLUDE '../helpers/strings.rosy';
+INCLUDE '../helpers/da_helpers.rosy';
+INCLUDE '../helpers/polynomial.rosy';
+INCLUDE '../helpers/linear_algebra.rosy';
+INCLUDE '../helpers/numerics.rosy';
+INCLUDE '../helpers/io.rosy';
 
 { ----- Enge function ----------------------------------
   Returns DA in the production case where S is a Taylor series in the

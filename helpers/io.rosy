@@ -3,6 +3,10 @@
 
 BEGIN;
 
+INCLUDE "../globals.rosy";
+INCLUDE 'strings.rosy';
+INCLUDE 'math.rosy';
+
 { ----- Copy a text file FN1 -> FN2 ------------------
   Conversion:  uses `ELSEIF LO(1) ;` as an always-true tail clause;
   becomes `ELSE` in ROSY. No global captures, fully self-contained.        }

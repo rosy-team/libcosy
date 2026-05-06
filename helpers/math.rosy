@@ -4,6 +4,8 @@
 
 BEGIN;
 
+INCLUDE '../globals.rosy';
+
 { ----- Basic arithmetic primitives -------------------- }
 
 FUNCTION (RE) MAX I (RE) J (RE);

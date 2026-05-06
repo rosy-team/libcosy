@@ -16,6 +16,18 @@
 BEGIN;
 
 INCLUDE '../globals.rosy';
+INCLUDE '../helpers/math.rosy';
+INCLUDE '../helpers/strings.rosy';
+INCLUDE '../helpers/da_helpers.rosy';
+INCLUDE '../helpers/polynomial.rosy';
+INCLUDE '../helpers/linear_algebra.rosy';
+INCLUDE '../helpers/numerics.rosy';
+INCLUDE '../helpers/io.rosy';
+INCLUDE 'fringe_field.rosy';
+INCLUDE 'reference_particle.rosy';
+INCLUDE 'map_ops.rosy';
+INCLUDE 'field_potential.rosy';
+INCLUDE 'normal_form.rosy';
 
 { ----- TRT: set TR title ---------------------------------
   TRT(LIN) flags that a title string is set (LTR := 1) and stores the

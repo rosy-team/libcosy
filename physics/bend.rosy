@@ -24,6 +24,14 @@
 BEGIN;
 
 INCLUDE '../globals.rosy';
+INCLUDE '../helpers/da_helpers.rosy';
+INCLUDE '../helpers/strings.rosy';
+INCLUDE '../helpers/math.rosy';
+INCLUDE 'map_ops.rosy';
+INCLUDE 'field_potential.rosy';
+INCLUDE 'fringe_field.rosy';
+INCLUDE 'elements_basic.rosy';
+INCLUDE 'elements_magnetic.rosy';
 
 { ----- BEND: full general magnet --------------------- }
 PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)

@@ -3,6 +3,8 @@
 BEGIN;
 
 INCLUDE '../globals.rosy';
+INCLUDE 'da_helpers.rosy';
+INCLUDE 'math.rosy';
 
 { ----- Order-weighted DA norm -----------------------------
   WABS(X, W) returns the COSY order-weighted norm of the DA X using
@@ -38,7 +40,7 @@ ENDFUNCTION;
   ROSY needs compile-time dimensions. Effective dimensions are bounded
   by the L parameter. POLVAL routes to rosy_polval_da via the DA-array
   dispatch.                                                              }
-PROCEDURE MI M N L (RE) IER NO (RE) NV (RE) NM1 (RE);
+PROCEDURE MI M (DA 20) N (DA 20) L (RE) IER (RE) NO (RE) NV (RE) NM1 (RE);
   VARIABLE (RE 20) C;
   VARIABLE (RE 20 20) AL;
   VARIABLE (RE 20 20) AI;

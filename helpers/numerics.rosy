@@ -4,6 +4,9 @@
 
 BEGIN;
 
+INCLUDE '../globals.rosy';
+INCLUDE 'da_helpers.rosy';
+
 { ----- Bethe-Bloch coefficient setter -------------- }
 PROCEDURE BBC Z A RHO I DELTA C;
   BETHEBLOCHC(1) := Z; BETHEBLOCHC(2) := A;     BETHEBLOCHC(3) := RHO;
