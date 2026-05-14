@@ -1,6 +1,6 @@
 BEGIN;
 
-MODULE GITHUB "rosy-team/libcosy" "v1.0.1";
+INCLUDE '../mod.rosy';
 
 OV 2 2 0;
 RPP 100;
