@@ -1,0 +1,13 @@
+BEGIN;
+
+MODULE GITHUB "rosy-team/libcosy" "v1.0.1";
+
+OV 2 2 0;
+RPP 100;
+UM;
+
+DL 0.5;
+
+WRITE 6 CONS(GTRA[1]) CONS(GTRA[3]);
+
+END;

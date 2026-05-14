@@ -262,12 +262,13 @@ ENDPROCEDURE;
   seeded by RP. Spin maps (SPNR / SSCR) become 3×3 identities when LSPN=1.
 
   Differences from :
-   * Axis-tracking arrays AXP / AXD / LTRA / GTRA are all touched by the
+   * Axis-tracking arrays AXP / AXD / are all touched by the
       UM body for the COSY graphics display — graphics is out of
      scope for libcosy so the corresponding lines are intentionally
      omitted. The flow-control flag LUM and the path-length scalars
      SPOS / GPLOC / NCT / NCCT are still set so downstream guards see
-     `UM-was-called`.                                                    }
+     `UM-was-called`. 
+    * LTRA / GTRA are used in UPDATE as the accumulated global transform: POLVAL 1 GTRA 3 LTRA 3 GTRA 3;}
 PROCEDURE UM;
   VARIABLE (RE) I; VARIABLE (RE) J;
   IF LRP = 0;
@@ -277,6 +278,9 @@ PROCEDURE UM;
   LOOP I 1 8;
     MAP[I] := XX[I];
     MSC[I] := MAP[I];
+    LTRA[1] := DD[1]; LTRA[2] := DD[2]; LTRA[3] := DD[3];
+    GTRA[1] := DD[1]; GTRA[2] := DD[2]; GTRA[3] := DD[3];
+
   ENDLOOP;
   IF LSPN = 1;
     LOOP I 1 3;
