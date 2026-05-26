@@ -47,11 +47,11 @@ INCLUDE 'field_potential.rosy';
 
   Parameters
     L (RE)  — physical length [m]
-    B (RE)  — pole-tip magnetic field [T]
+    B (DA)  — pole-tip magnetic field [T], allowing PARA-dependent strength
     D (RE)  — pole-tip aperture [m]                                       }
-PROCEDURE MQ L (RE) B (RE) D (RE);
+PROCEDURE MQ L (RE) B (DA) D (RE);
 
-  PROCEDURE MQUAD IAP L (RE) F (RE) AP (RE);
+  PROCEDURE MQUAD IAP L (RE) F (DA) AP (RE);
     VARIABLE (RE) C; VARIABLE (DA) OM1; VARIABLE (DA) OM2;
     VARIABLE (DA) FI; VARIABLE (DA) FP; VARIABLE (DA) N; VARIABLE (DA) OM;
 
@@ -144,9 +144,9 @@ ENDPROCEDURE;
     L (RE) — physical length [m]
     B (RE) — pole-tip magnetic field [T]
     D (RE) — pole-tip aperture [m]                                       }
-PROCEDURE MH L (RE) B (RE) D (RE);
+PROCEDURE MH L (RE) B (DA) D (RE);
 
-  PROCEDURE MHEXA IAP L (RE) F (RE) AP (RE);
+  PROCEDURE MHEXA IAP L (RE) F (DA) AP (RE);
     VARIABLE (RE) C;
     VARIABLE (DA) X; VARIABLE (DA) XZ; VARIABLE (DA) Y;
     VARIABLE (DA) FP; VARIABLE (DA) FI;
@@ -197,11 +197,11 @@ ENDPROCEDURE;
   K into the equivalent pole-tip field B = K · χ_m · D^(2n) / D, where n is
   the multipole order. Useful when lattice files specify K1 / K2 directly
   rather than B.                                                          }
-PROCEDURE MQK L (RE) K (RE) D (RE);
-  MQ L K*CONS(CHIM)*D D;
+PROCEDURE MQK L (RE) K (DA) D (RE);
+  MQ L K*CONS(CHIM)*D+0*DA(1) D;
 ENDPROCEDURE;
 
-PROCEDURE MSK L (RE) K (RE) D (RE);
+PROCEDURE MSK L (RE) K (DA) D (RE);
   MH L K*CONS(CHIM)*D*D D;
 ENDPROCEDURE;
 
@@ -222,7 +222,7 @@ ENDPROCEDURE;
   magnets (e.g. octupole MO with NOC<3), the lazy init of PMM/PEM
   in POTFLD won't have populated the needed entries — user must call
   OV with NO ≥ multipole order.                                       }
-PROCEDURE MO L (RE) B (RE) D (RE);
+PROCEDURE MO L (RE) B (DA) D (RE);
   NPOL := 1;
   PPOL[1] := B/D/D/D + 0*DD[1];
   MPOL[1] := 4;
@@ -230,7 +230,7 @@ PROCEDURE MO L (RE) B (RE) D (RE);
   FFELE L D 0 1 2 'MO';
 ENDPROCEDURE;
 
-PROCEDURE MD L (RE) B (RE) D (RE);
+PROCEDURE MD L (RE) B (DA) D (RE);
   NPOL := 1;
   PPOL[1] := B/D/D/D/D + 0*DD[1];
   MPOL[1] := 5;
@@ -238,7 +238,7 @@ PROCEDURE MD L (RE) B (RE) D (RE);
   FFELE L D 0 1 2 'MD';
 ENDPROCEDURE;
 
-PROCEDURE MZ L (RE) B (RE) D (RE);
+PROCEDURE MZ L (RE) B (DA) D (RE);
   NPOL := 1;
   PPOL[1] := B/D/D/D/D/D + 0*DD[1];
   MPOL[1] := 6;
@@ -248,7 +248,7 @@ ENDPROCEDURE;
 
 { M5: 5-pole bundle. Sets quadrupole through dodecapole strengths in
   one call. Cosy.fox L3187-3193.                                       }
-PROCEDURE M5 L (RE) BQ (RE) BH (RE) BO (RE) BD (RE) BZ (RE) D (RE);
+PROCEDURE M5 L (RE) BQ (DA) BH (DA) BO (DA) BD (DA) BZ (DA) D (RE);
   PPOL[1] := BQ/D + 0*DD[1];                MPOL[1] := 2;
   PPOL[2] := BH/D/D + 0*DD[1];              MPOL[2] := 3;
   PPOL[3] := BO/D/D/D + 0*DD[1];            MPOL[3] := 4;
@@ -262,7 +262,7 @@ ENDPROCEDURE;
 { MM: arbitrary normal multipole array.
   BA[I] is the I-th multipole strength (I=1 quad, I=2 sext, ...);
   NBA is the number of provided strengths.                            }
-PROCEDURE MM L (RE) BA (RE 5) NBA (RE) D (RE);
+PROCEDURE MM L (RE) BA (DA 5) NBA (RE) D (RE);
   VARIABLE (RE) I;
   VARIABLE (DA) DP;
   DP := 1 + 0*DD[1];
@@ -278,7 +278,7 @@ ENDPROCEDURE;
 
 { MMS: skew multipole — adds skew components on top of MM.
   NB is count of provided pairs; BA is normal strengths, BS is skew.   }
-PROCEDURE MMS L (RE) BA (RE 5) BS (RE 5) NB (RE) D (RE);
+PROCEDURE MMS L (RE) BA (DA 5) BS (DA 5) NB (RE) D (RE);
   VARIABLE (RE) I;
   VARIABLE (DA) DP;
   DP := 1 + 0*DD[1];
@@ -300,7 +300,7 @@ ENDPROCEDURE;
 
 { K-variants: replace the explicit field strengths with integrated K
   values, scaled by χ_m ≈ 1/(B·ρ) for magnetic rigidity normalisation. }
-PROCEDURE MOK L (RE) K (RE) D (RE);
+PROCEDURE MOK L (RE) K (DA) D (RE);
   NPOL := 1;
   PPOL[1] := K*CONS(CHIM) + 0*DD[1];
   MPOL[1] := 4;
@@ -308,7 +308,7 @@ PROCEDURE MOK L (RE) K (RE) D (RE);
   FFELE L D 0 1 2 'MOK';
 ENDPROCEDURE;
 
-PROCEDURE MDK L (RE) K (RE) D (RE);
+PROCEDURE MDK L (RE) K (DA) D (RE);
   NPOL := 1;
   PPOL[1] := K*CONS(CHIM) + 0*DD[1];
   MPOL[1] := 5;
@@ -316,7 +316,7 @@ PROCEDURE MDK L (RE) K (RE) D (RE);
   FFELE L D 0 1 2 'MDK';
 ENDPROCEDURE;
 
-PROCEDURE MZK L (RE) K (RE) D (RE);
+PROCEDURE MZK L (RE) K (DA) D (RE);
   NPOL := 1;
   PPOL[1] := K*CONS(CHIM) + 0*DD[1];
   MPOL[1] := 6;
@@ -328,7 +328,7 @@ ENDPROCEDURE;
   MMK / MMSK are sister wrappers to MM/MMS that take integrated K
   values scaled by χ_m, mirroring the MOK/MDK/MZK relationship for
   array-of-strengths magnets.                                          }
-PROCEDURE MMK L (RE) BA (RE 5) NBA (RE) D (RE);
+PROCEDURE MMK L (RE) BA (DA 5) NBA (RE) D (RE);
   VARIABLE (RE) I;
   LOOP I 1 NBA;
     PPOL[I] := BA[I]*CONS(CHIM) + 0*DD[1];
@@ -343,10 +343,10 @@ ENDPROCEDURE;
   an angle vector TA into a single MMS call by computing the skew
   partner BS := KA[I]·sin((I+1)·TA[I]·deg→rad) and rotating KA by
   cos. Mutates KA / TA in place — semantics match .           }
-PROCEDURE MMSK L (RE) KA (RE 5) TA (RE 5) NA (RE) D (RE);
+PROCEDURE MMSK L (RE) KA (DA 5) TA (DA 5) NA (RE) D (RE);
   VARIABLE (RE) I;
   VARIABLE (RE) DP;
-  VARIABLE (RE) BS;
+  VARIABLE (DA) BS;
   DP := 1;
   LOOP I 1 NA;
     DP := DP*D;
@@ -367,7 +367,7 @@ ENDPROCEDURE;
   amp-meter units), used by CMR/CMSI/CMST/CMSTP for current-driven
   field strengths.                                                       }
 
-PROCEDURE CMR I (RE) D (RE);
+PROCEDURE CMR I (DA) D (RE);
   VARIABLE (RE) MU;
   VARIABLE (RE) D_AP;
   D_AP := D;
@@ -381,7 +381,7 @@ PROCEDURE CMR I (RE) D (RE);
   DSDED 5E4*D_AP 0 1E-4*D_AP 1E4*D_AP 1E4*D_AP D_AP;
 ENDPROCEDURE;
 
-PROCEDURE CMG B (RE) D (RE);
+PROCEDURE CMG B (DA) D (RE);
   VARIABLE (RE) D_AP;
   D_AP := D;
   NPOL := 1;
@@ -393,7 +393,7 @@ PROCEDURE CMG B (RE) D (RE);
   DSDED 5*D_AP 0 D_AP/40 D_AP 10*D_AP D_AP;
 ENDPROCEDURE;
 
-PROCEDURE CML B (RE) D (RE);
+PROCEDURE CML B (DA) D (RE);
   VARIABLE (RE) D_AP;
   D_AP := D;
   NPOL := 1;
@@ -405,7 +405,7 @@ PROCEDURE CML B (RE) D (RE);
   DSDED 5E4*D_AP 0 1E-4*D_AP 1E4*D_AP 1E4*D_AP D_AP;
 ENDPROCEDURE;
 
-PROCEDURE CMSI I (RE) N (RE) D (RE) L (RE);
+PROCEDURE CMSI I (DA) N (DA) D (RE) L (RE);
   VARIABLE (RE) MU;
   VARIABLE (RE) D_AP;
   D_AP := D;
@@ -420,7 +420,7 @@ PROCEDURE CMSI I (RE) N (RE) D (RE) L (RE);
   DSDED 200*D_AP L 1E-4*D_AP D_AP 3*D_AP D_AP;
 ENDPROCEDURE;
 
-PROCEDURE CMS B (RE) D (RE) L (RE);
+PROCEDURE CMS B (DA) D (RE) L (RE);
   VARIABLE (RE) D_AP;
   D_AP := D;
   NPOL := 1;
@@ -439,7 +439,7 @@ ENDPROCEDURE;
   Pads the SDELE integration with 20·D backward/forward drifts when
   S1≈0 or S2≈L (entrance/exit slices) so the entry/exit fringe is
   fully captured.                                                         }
-PROCEDURE CMSP B (RE) D (RE) L (RE) S1 (RE) S2 (RE);
+PROCEDURE CMSP B (DA) D (RE) L (RE) S1 (RE) S2 (RE);
   VARIABLE (RE) D_AP;
   VARIABLE (RE) DS1;
   VARIABLE (RE) DS2;
@@ -485,7 +485,7 @@ PROCEDURE CMSP B (RE) D (RE) L (RE) S1 (RE) S2 (RE);
   UPDATE 1 1;
 ENDPROCEDURE;
 
-PROCEDURE CMST NI (RE) R1 (RE) R2 (RE) L (RE);
+PROCEDURE CMST NI (DA) R1 (RE) R2 (RE) L (RE);
   VARIABLE (RE) MU;
   MU := 1.2566E-6;
   IF (R1 < 0) OR (R1 = 0);
@@ -511,7 +511,7 @@ ENDPROCEDURE;
   contributes (NI[IS], L[IS], R1[IS], R2[IS]) starting at X[IS]; the
   piece data lands in MFD[IS, 1..5] for NSDP=14 to consume. The S1/S2
   slice arguments cap the integration window, mirroring CMSP.         }
-PROCEDURE CMSTP N (RE) NI (RE 30) R1 (RE 30) R2 (RE 30) L (RE 30)
+PROCEDURE CMSTP N (RE) NI (DA 30) R1 (RE 30) R2 (RE 30) L (RE 30)
                 X (RE 30) S1 (RE) S2 (RE);
   VARIABLE (RE) MU;
   VARIABLE (RE) DMIN;
@@ -525,11 +525,11 @@ PROCEDURE CMSTP N (RE) NI (RE 30) R1 (RE 30) R2 (RE 30) L (RE 30)
     IF (R2[IS_GRID] < R1[IS_GRID]) OR (R2[IS_GRID] = R1[IS_GRID]) OR (L[IS_GRID] < 0);
       PPOL[1] := -1 + 0*DD[1];
     ENDIF;
-    MFD[IS_GRID, 1] := MU*NI[IS_GRID]/4/(R2[IS_GRID] - R1[IS_GRID]);
-    MFD[IS_GRID, 2] := L[IS_GRID];
-    MFD[IS_GRID, 3] := R1[IS_GRID];
-    MFD[IS_GRID, 4] := R2[IS_GRID];
-    MFD[IS_GRID, 5] := X[IS_GRID];
+    MFD[IS_GRID, 1] := MU*NI[IS_GRID]/4/(R2[IS_GRID] - R1[IS_GRID]) + 0*DD[1];
+    MFD[IS_GRID, 2] := L[IS_GRID] + 0*DD[1];
+    MFD[IS_GRID, 3] := R1[IS_GRID] + 0*DD[1];
+    MFD[IS_GRID, 4] := R2[IS_GRID] + 0*DD[1];
+    MFD[IS_GRID, 5] := X[IS_GRID] + 0*DD[1];
   ENDLOOP;
   IF (DMIN < 0) OR (DMIN = 0) OR (DMIN = 1E8);
     WRITE 6 ' *** ERROR in CMSTP, R1<0 or R1=0 or R1 too large';
@@ -577,7 +577,7 @@ PROCEDURE MGE NP (RE) A (RE 30 30) NS (RE) DS (RE) SIGMA (RE) D (RE);
       DPOW := DPOW*D_AP;
     ENDLOOP;
     LOOP IS_GRID 1 NS;
-      MFD[I, IS_GRID] := A[I, IS_GRID]/DPOW;
+      MFD[I, IS_GRID] := A[I, IS_GRID]/DPOW + 0*DD[1];
     ENDLOOP;
   ENDLOOP;
   PPOL[1] := NS + 0*DD[1];
@@ -630,7 +630,7 @@ PROCEDURE MF L (RE) A_GRID (RE 700 30) NX (RE) NZ (RE)
   MFP[1] := 0;
   LOOP IX 1 NX;
     LOOP IZ 1 NZ;
-      MFD[IX, IZ] := A_GRID[IX, IZ];
+      MFD[IX, IZ] := A_GRID[IX, IZ] + 0*DD[1];
     ENDLOOP;
   ENDLOOP;
   PPOL[1] := NX + 0*DD[1];
@@ -682,7 +682,7 @@ ENDPROCEDURE;
 
    uses LPI graphics manipulation to suppress wiggler-internal
   picture updates — libcosy has no graphics, so that's skipped.    }
-PROCEDURE WI B (RE) K (RE) L (RE) D (RE) K1 (RE) IA (RE) A_COEFF (RE 10);
+PROCEDURE WI B (DA) K (RE) L (RE) D (RE) K1 (DA) IA (RE) A_COEFF (RE 10);
   VARIABLE (RE) L1;
   VARIABLE (RE) LS;
   VARIABLE (RE) I;

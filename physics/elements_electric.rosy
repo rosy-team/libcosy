@@ -80,7 +80,7 @@ PROCEDURE RF V (RE 3 3) N (RE) W (RE) PHI (RE) D (RE);
   EE0 := CONS(E0);
   PH := PHI*DEGRAD;
   VV0 := POLY(0, 0, V, N)*SIN(PH)*0.001*CONS(Z0);
-  RP CONS(E0)+VV0 CONS(M0) CONS(Z0);
+  RP CONS(E0)+VV0+0*DA(1) CONS(M0)+0*DA(1) CONS(Z0)+0*DA(1);
   IF CONS(E0) < 1E-10;
     WRITE 6 ' *** RF TOO HIGH';
     QUIT 0;
@@ -106,7 +106,7 @@ ENDPROCEDURE;
   EO = electric octupole, ED = electric decapole, EZ = electric
   dodecapole. E5 bundles the 5 lowest electric multipoles into one
   call. EM/EMS are array-of-strengths normal/skew forms.              }
-PROCEDURE EQ L (RE) VV (RE) D (RE);
+PROCEDURE EQ L (RE) VV (DA) D (RE);
   NPOL := 1;
   PPOL[1] := VV/D/D + 0*DD[1];
   MPOL[1] := -2;
@@ -114,7 +114,7 @@ PROCEDURE EQ L (RE) VV (RE) D (RE);
   FFELE L D 0 1 2 'EQ';
 ENDPROCEDURE;
 
-PROCEDURE EH L (RE) VV (RE) D (RE);
+PROCEDURE EH L (RE) VV (DA) D (RE);
   NPOL := 1;
   PPOL[1] := VV/D/D/D + 0*DD[1];
   MPOL[1] := -3;
@@ -122,7 +122,7 @@ PROCEDURE EH L (RE) VV (RE) D (RE);
   FFELE L D 0 1 2 'EH';
 ENDPROCEDURE;
 
-PROCEDURE EO L (RE) VV (RE) D (RE);
+PROCEDURE EO L (RE) VV (DA) D (RE);
   NPOL := 1;
   PPOL[1] := VV/D/D/D/D + 0*DD[1];
   MPOL[1] := -4;
@@ -130,7 +130,7 @@ PROCEDURE EO L (RE) VV (RE) D (RE);
   FFELE L D 0 1 2 'EO';
 ENDPROCEDURE;
 
-PROCEDURE ED L (RE) VV (RE) D (RE);
+PROCEDURE ED L (RE) VV (DA) D (RE);
   NPOL := 1;
   PPOL[1] := VV/D/D/D/D/D + 0*DD[1];
   MPOL[1] := -5;
@@ -138,7 +138,7 @@ PROCEDURE ED L (RE) VV (RE) D (RE);
   FFELE L D 0 1 2 'ED';
 ENDPROCEDURE;
 
-PROCEDURE EZ L (RE) VV (RE) D (RE);
+PROCEDURE EZ L (RE) VV (DA) D (RE);
   NPOL := 1;
   PPOL[1] := VV/D/D/D/D/D/D + 0*DD[1];
   MPOL[1] := -6;
@@ -147,7 +147,7 @@ PROCEDURE EZ L (RE) VV (RE) D (RE);
 ENDPROCEDURE;
 
 { E5: 5-pole electric bundle. }
-PROCEDURE E5 L (RE) VQ (RE) VH (RE) VO (RE) VD (RE) VZ (RE) D (RE);
+PROCEDURE E5 L (RE) VQ (DA) VH (DA) VO (DA) VD (DA) VZ (DA) D (RE);
   NPOL := 5;
   PPOL[1] := VQ/D/D + 0*DD[1];                MPOL[1] := -2;
   PPOL[2] := VH/D/D/D + 0*DD[1];              MPOL[2] := -3;
@@ -159,7 +159,7 @@ PROCEDURE E5 L (RE) VQ (RE) VH (RE) VO (RE) VD (RE) VZ (RE) D (RE);
 ENDPROCEDURE;
 
 { EM: arbitrary normal electric multipole array. }
-PROCEDURE EM L (RE) VA (RE 5) NVA (RE) D (RE);
+PROCEDURE EM L (RE) VA (DA 5) NVA (RE) D (RE);
   VARIABLE (RE) I;
   VARIABLE (DA) DP;
   DP := 1/D + 0*DD[1];
@@ -191,7 +191,7 @@ ENDPROCEDURE;
     3. MPOL[I] = -I (electric labels).
     4. SIELE R*PHI D — integrate across arc length R·PHI.
     5. LOCSET with curved-axis update. }
-PROCEDURE EBEND R (RE) PHI (RE) D (RE) N_ARR (RE 16) NT (RE) CI (ST);
+PROCEDURE EBEND R (RE) PHI (RE) D (RE) N_ARR (DA 16) NT (RE) CI (ST);
   VARIABLE (RE) RPP;
   VARIABLE (RE) I;
   VARIABLE (RE) NEG1;
@@ -308,47 +308,47 @@ ENDPROCEDURE;
   EC takes user-supplied N array; ES bundles 5 scalars; ECL/ESP build
   the canonical cylindrical / spherical N arrays before delegating to
   EBEND.                                                                }
-PROCEDURE EC R (RE) PHID (RE) D (RE) N_ARR (RE 16) NT (RE);
+PROCEDURE EC R (RE) PHID (RE) D (RE) N_ARR (DA 16) NT (RE);
   EBEND R PHID*DEGRAD D N_ARR NT 'EC';
 ENDPROCEDURE;
 
 PROCEDURE ES R (RE) PHID (RE) D (RE)
-            N1 (RE) N2 (RE) N3 (RE) N4 (RE) N5 (RE);
-  VARIABLE (RE 16) N_VEC;
+            N1 (DA) N2 (DA) N3 (DA) N4 (DA) N5 (DA);
+  VARIABLE (DA 16) N_VEC;
   VARIABLE (RE) I;
   N_VEC[1] := N1; N_VEC[2] := N2; N_VEC[3] := N3; N_VEC[4] := N4; N_VEC[5] := N5;
   LOOP I 6 16;
-    N_VEC[I] := 0;
+    N_VEC[I] := 0*DD[1];
   ENDLOOP;
   EBEND R PHID*DEGRAD D N_VEC 5 'ES';
 ENDPROCEDURE;
 
 { ECL: cylindrical deflector — N[I] = (-1)^(I+1) for all I up to MAX(5,NO+1). }
 PROCEDURE ECL R (RE) PHID (RE) D (RE);
-  VARIABLE (RE 16) N_VEC;
+  VARIABLE (DA 16) N_VEC;
   VARIABLE (RE) I;
   VARIABLE (RE) NT_LOCAL;
   NT_LOCAL := MAX(5, NO+1);
   LOOP I 1 NT_LOCAL;
-    N_VEC[I] := 1;
+    N_VEC[I] := 1 + 0*DD[1];
   ENDLOOP;
   LOOP I 2 NT_LOCAL 2;
-    N_VEC[I] := -1;
+    N_VEC[I] := -1 + 0*DD[1];
   ENDLOOP;
   EBEND R PHID*DEGRAD D N_VEC NT_LOCAL 'ECL';
 ENDPROCEDURE;
 
 { ESP: spherical deflector — N[I] = (-1)^(I+1) · (I+1). }
 PROCEDURE ESP R (RE) PHID (RE) D (RE);
-  VARIABLE (RE 16) N_VEC;
+  VARIABLE (DA 16) N_VEC;
   VARIABLE (RE) I;
   VARIABLE (RE) NT_LOCAL;
   NT_LOCAL := MAX(5, NO+1);
   LOOP I 1 NT_LOCAL;
-    N_VEC[I] := I+1;
+    N_VEC[I] := I+1 + 0*DD[1];
   ENDLOOP;
   LOOP I 2 NT_LOCAL 2;
-    N_VEC[I] := -(I+1);
+    N_VEC[I] := -(I+1) + 0*DD[1];
   ENDLOOP;
   EBEND R PHID*DEGRAD D N_VEC NT_LOCAL 'ESP';
 ENDPROCEDURE;
@@ -360,7 +360,7 @@ ENDPROCEDURE;
 
   CEG: Gaussian electric lens. Uses NSDP=3
   (Gaussian s-profile), DSDED for the negative-drift wrap.            }
-PROCEDURE DC V_VOLT (RE) D_AP (RE) L (RE);
+PROCEDURE DC V_VOLT (DA) D_AP (RE) L (RE);
   NPOL := 1;
   MPOL[1] := -20;
   NSDP := 11;
@@ -372,7 +372,7 @@ PROCEDURE DC V_VOLT (RE) D_AP (RE) L (RE);
   UPDATE 1 1;
 ENDPROCEDURE;
 
-PROCEDURE CEG V_VOLT (RE) D_AP (RE);
+PROCEDURE CEG V_VOLT (DA) D_AP (RE);
   NPOL := 1;
   PPOL[1] := V_VOLT + 0*DD[1];
   MPOL[1] := -20;
@@ -387,7 +387,7 @@ ENDPROCEDURE;
   spacing. Uses NSDP=6 (three-tube cosh/log profile) with the
   characteristic-length scaling DR := D/O where O = 1.315 (Jiye
   empirical constant).                                                }
-PROCEDURE CEL V_VOLT (RE) D_AP (RE) L_GAP (RE) C_SPACE (RE);
+PROCEDURE CEL V_VOLT (DA) D_AP (RE) L_GAP (RE) C_SPACE (RE);
   VARIABLE (RE) O;
   O := 1.315;
   NPOL := 1;
@@ -406,7 +406,7 @@ ENDPROCEDURE;
   V/D/L/C parameters as for CEL. Uses NSDP=9 (atan-product profile).
   DSDED extends 15D + C + L/2 in each direction since the atan field
   decay is slower than the cosh of CEL.                                }
-PROCEDURE CEA V_VOLT (RE) D_AP (RE) L_GAP (RE) C_SPACE (RE);
+PROCEDURE CEA V_VOLT (DA) D_AP (RE) L_GAP (RE) C_SPACE (RE);
   NPOL := 1;
   MPOL[1] := -20;
   NSDP := 9;
@@ -435,7 +435,7 @@ ENDPROCEDURE;
   WC delegates to FFELE which dispatches on the current LFR setting
   (0, 1, -1, -2, -10 are all supported via the FFELE dispatch hub). }
 PROCEDURE WC RE_RAD (RE) RM_RAD (RE) L (RE) D_AP (RE)
-            NE_ARR (RE 16) NM_ARR (RE 16) NT (RE);
+            NE_ARR (DA 16) NM_ARR (DA 16) NT (RE);
   VARIABLE (RE) I;
   VARIABLE (RE) H_LOCAL;
   VARIABLE (RE) PE_DIP;
@@ -465,18 +465,18 @@ ENDPROCEDURE;
 { ----- WF — homogeneous Wien filter -----
   Convenience wrapper: WC with NT=0 (no multipoles).                   }
 PROCEDURE WF RE_RAD (RE) RM_RAD (RE) L (RE) D_AP (RE);
-  VARIABLE (RE 16) NE_ZEROS;
-  VARIABLE (RE 16) NM_ZEROS;
+  VARIABLE (DA 16) NE_ZEROS;
+  VARIABLE (DA 16) NM_ZEROS;
   VARIABLE (RE) I;
   LOOP I 1 16;
-    NE_ZEROS[I] := 0;
-    NM_ZEROS[I] := 0;
+    NE_ZEROS[I] := 0*DD[1];
+    NM_ZEROS[I] := 0*DD[1];
   ENDLOOP;
   WC RE_RAD RM_RAD L D_AP NE_ZEROS NM_ZEROS 0;
 ENDPROCEDURE;
 
 { EMS: skew electric multipole — VA normal, VS skew. }
-PROCEDURE EMS L (RE) VA (RE 5) VS (RE 5) NV_PARAM (RE) D (RE);
+PROCEDURE EMS L (RE) VA (DA 5) VS (DA 5) NV_PARAM (RE) D (RE);
   VARIABLE (RE) I;
   VARIABLE (DA) DP;
   DP := 1/D + 0*DD[1];

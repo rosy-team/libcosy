@@ -130,7 +130,7 @@ PROCEDURE SYSCLM IAP (DA 8) L0 (RE) B0 (DA) D0 (DA)
       LFM_SCALAR IAP C_IC IAP P_LIE NEG_ONE_LFM;
       { Scale map: rebuild ref particle at AA's reference, CATR,
         scale phase-space by MAG, restore ref particle, TRCA back. }
-      RP AA[4] AA[5] AA[6];
+      RP AA[4]+0*DA(1) AA[5]+0*DA(1) AA[6]+0*DA(1);
       CATR IAP IAP AA[1];
       LOOP I 1 NV;
         COP[I] := DD[I];
@@ -143,9 +143,9 @@ PROCEDURE SYSCLM IAP (DA 8) L0 (RE) B0 (DA) D0 (DA)
         IAP[I] := MAG*IAP[I];
       ENDLOOP;
       IF LIN_FLAG = 1;
-        RP CONS(EP) CONS(MP) CONS(ZP);
+        RP CONS(EP)+0*DA(1) CONS(MP)+0*DA(1) CONS(ZP)+0*DA(1);
       ELSE;
-        RP CONS(EP) CONS(MP) CONS(ZP);
+        RP CONS(EP)+0*DA(1) CONS(MP)+0*DA(1) CONS(ZP)+0*DA(1);
       ENDIF;
       IF LFR < 0;
         TRCA IAP IAP 0;
@@ -153,7 +153,7 @@ PROCEDURE SYSCLM IAP (DA 8) L0 (RE) B0 (DA) D0 (DA)
         TRCA IAP IAP L0;
       ENDIF;
       IF LIN_FLAG = 1;
-        RP CONS(EP) CONS(MP) CONS(ZP);
+        RP CONS(EP)+0*DA(1) CONS(MP)+0*DA(1) CONS(ZP)+0*DA(1);
         BDEP IAP L0+0*DD[1] 1+0*DD[1];
       ENDIF;
     ENDIF;

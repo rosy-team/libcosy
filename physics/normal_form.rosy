@@ -56,11 +56,11 @@ PROCEDURE DANF M (DA 8) MN (DA 8) MA (DA 8) IMA (RE) RS (CD) EPS (RE);
 
   { ----- GT outputs ----- }
   VARIABLE (DA 8) F;
-  VARIABLE (DA 4) MUU;
-  VARIABLE (DA 4) AA;
-  VARIABLE (DA 4) BB;
-  VARIABLE (DA 4) GG;
-  VARIABLE (DA 4) RR;
+  VARIABLE (CD 4) MUU;
+  VARIABLE (CD 4) AA;
+  VARIABLE (CD 4) BB;
+  VARIABLE (CD 4) GG;
+  VARIABLE (CD 4) RR;
 
   { ----- Per-pair extracted CM scalars + RE-array PHI / RVE buffers -----
     PHI / RVE are stored as RE-arrays (indexed write-friendly) and
@@ -1565,10 +1565,11 @@ ENDPROCEDURE;
   diagnostic warns if the cast would lose tune-relevant data (signals
   the user should call TS directly with a CD buffer).                  }
 PROCEDURE TP MU (DA 4);
-  VARIABLE (DA 3) A;
-  VARIABLE (DA 3) B;
-  VARIABLE (DA 3) G;
-  VARIABLE (DA 3) R;
+  VARIABLE (CD 3) A;
+  VARIABLE (CD 3) B;
+  VARIABLE (CD 3) G;
+  VARIABLE (CD 3) R;
+  VARIABLE (CD 4) MU_GT;
   VARIABLE (DA 8) F;
   VARIABLE (RE) I;
   VARIABLE (RE) K;
@@ -1591,7 +1592,10 @@ PROCEDURE TP MU (DA 4);
   ENDLOOP;
 
   IF LC = 0;
-    GT MAP F MU A B G R;
+    GT MAP F MU_GT A B G R;
+    LOOP I 1 ND;
+      MU[I] := REAL(MU_GT[I]);
+    ENDLOOP;
   ELSE;
     { Coupled planes —  path. }
     VARIABLE (CD 4) MU_CD;

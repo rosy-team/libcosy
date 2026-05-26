@@ -126,10 +126,10 @@ VARIABLE (DA 100) VN;    VARIABLE (DA 100) WN;
 VARIABLE (VE) PN;        VARIABLE (RE) NPG;
 VARIABLE (RE) DR;        VARIABLE (RE) DMAX;
 { Measured-field data table —  declares `MFD 6 700 30` (3D);
-  libcosy collapses to 2D (RE 700 30) which handles the dominant
-  use-case (MF with NX ≤ 700, NZ ≤ 30) and keeps MGE/NSDP=12 working
-  within NS ≤ 30 s-samples. NP ≤ 700 (multipole index) is generous.  }
-VARIABLE (RE 8) MFP;     VARIABLE (RE 700 30) MFD;
+  libcosy collapses to 2D (DA 700 30) which handles the dominant
+  use-case (MF with NX ≤ 700, NZ ≤ 30), keeps MGE/NSDP=12 working
+  within NS ≤ 30 s-samples, and preserves PARA-dependent field data.  }
+VARIABLE (RE 8) MFP;     VARIABLE (DA 700 30) MFD;
 
 { Bethe-Bloch / box-counting helpers }
 VARIABLE (RE 6) BETHEBLOCHC;
@@ -138,12 +138,12 @@ VARIABLE (RE 5) BXNOD;       VARIABLE (RE 5 7) BXDDT;
 VARIABLE (RE 70) BXBOXID;    VARIABLE (RE) BXIBOX;
 VARIABLE (RE 70 4) BX1BOXPN; VARIABLE (RE 70 4 2 3) BX1BOXP;
 
-{ Runge-Kutta Butcher tableau (libcosy uses ROSY's DOP853 from RKCO).
-  RK_INIT_COEFFS in field_potential.rosy populates these from the
-  ROSY-side intrinsic. A=nodes, B=coupling matrix, C=8th-order weights,
-  D=7th-order weights (= C - error). HSQR is the step-adjustment
-  exponent. LRKCO marks "coefficients populated" sentinel.            }
-VARIABLE (RE 13) A; VARIABLE (RE 13 12) B; VARIABLE (RE 13) C; VARIABLE (RE 13) D;
+{ Runge-Kutta Butcher tableau. Use RK_* names instead of COSY's A/B/C/D
+  globals to avoid shadowing common element parameters B and D in ROSY's
+  closure/capture analysis. RK_A=nodes, RK_B=coupling matrix,
+  RK_C=8th-order weights, RK_D=7th-order weights.                     }
+VARIABLE (RE 13) RK_A; VARIABLE (RE 13 12) RK_B;
+VARIABLE (RE 13) RK_C; VARIABLE (RE 13) RK_D;
 VARIABLE (RE) HSQR; VARIABLE (RE) LRKCO; VARIABLE (RE) LRKO; VARIABLE (RE 2) RKO;
 VARIABLE (ST) RKOFNST;
 VARIABLE (RE) EPS; VARIABLE (RE) WAF;

@@ -87,7 +87,7 @@ ENDFUNCTION;
   (MGE general multipole-by-Gaussians) where s = S+DD[2] is symbolic.
   IP and IX still use CONS for grid indexing (must be RE), but the
   EXP(-SQR((IX-1-X/DX)/SIGMA)) term carries DA-X through naturally.    }
-FUNCTION (DA) GAUSS1_DA X (DA) NX (RE) DX (RE) SIGMA (RE) IP (RE) MFD_ (RE 700 30) ERR (RE);
+FUNCTION (DA) GAUSS1_DA X (DA) NX (RE) DX (RE) SIGMA (RE) IP (RE) MFD_ (DA 700 30) ERR (RE);
   VARIABLE (RE) NG;
   VARIABLE (RE) IXN;
   VARIABLE (RE) IX;
@@ -114,20 +114,20 @@ FUNCTION (DA) GAUSS1_DA X (DA) NX (RE) DX (RE) SIGMA (RE) IP (RE) MFD_ (RE 700 3
 ENDFUNCTION;
 
 { ----- 2D Gaussian interpolation ---------------------- }
-FUNCTION (RE) GAUSS X (RE) Z (RE) NX (RE) NZ (RE) DX (RE) DZ (RE) SIGMA (RE) MFD_ (RE 700 30) ERR (RE);
+FUNCTION (DA) GAUSS X (RE) Z (RE) NX (RE) NZ (RE) DX (RE) DZ (RE) SIGMA (RE) MFD_ (DA 700 30) ERR (RE);
   VARIABLE (RE) NG;
   VARIABLE (RE) IXN; VARIABLE (RE) IZN;
-  VARIABLE (RE) SUMZ;
+  VARIABLE (DA) SUMZ;
   VARIABLE (RE) IX; VARIABLE (RE) IZ;
   VARIABLE (RE) IXM; VARIABLE (RE) IZM;
   NG := NINT(8*SIGMA);
-  GAUSS := 0;
+  GAUSS := 0*DD[1];
   IXN := NINT(1 + CONS(X)/DX);
   IZN := NINT(1 + CONS(Z)/DZ);
   IF (IXN-NG < 1) OR (IXN+NG > NX) OR (IZN-NG < 1) OR (IZN+NG > NZ);
     ERR := 1;
     LOOP IX IXN-NG IXN+NG;
-      SUMZ := 0;
+      SUMZ := 0*DD[1];
       IXM := IX;
       IF IX < 1; IXM := 1;
       ELSEIF IX > NX; IXM := NX;
@@ -144,7 +144,7 @@ FUNCTION (RE) GAUSS X (RE) Z (RE) NX (RE) NZ (RE) DX (RE) DZ (RE) SIGMA (RE) MFD
   ELSE;
     ERR := 0;
     LOOP IX IXN-NG IXN+NG;
-      SUMZ := 0;
+      SUMZ := 0*DD[1];
       LOOP IZ IZN-NG IZN+NG;
         SUMZ := SUMZ + MFD_[IX, IZ]*EXP(-SQR((IZ-1-Z/DZ)/SIGMA));
       ENDLOOP;

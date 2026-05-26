@@ -35,7 +35,7 @@ INCLUDE 'elements_magnetic.rosy';
 
 { ----- BEND: full general magnet --------------------- }
 PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
-              N (RE 5) S1 (RE 5) S2 (RE 5) NT (RE);
+              N (DA 5) S1 (RE 5) S2 (RE 5) NT (RE);
 
   { Working scalars / arrays declared at BEND scope so nested helpers can
     capture them.  uses NMP (number of monomials per parameter)
@@ -459,10 +459,10 @@ ENDPROCEDURE;
 PROCEDURE DI R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE);
   VARIABLE (RE 5) S1Z;
   VARIABLE (RE 5) S2Z;
-  VARIABLE (RE 5) NZ;
+  VARIABLE (DA 5) NZ;
   VARIABLE (RE) I;
   LOOP I 1 5;
-    S1Z[I] := 0; S2Z[I] := 0; NZ[I] := 0;
+    S1Z[I] := 0; S2Z[I] := 0; NZ[I] := 0*DD[1];
   ENDLOOP;
   CE := 'DI';
   BEND R PHI*DEGRAD D E1*DEGRAD H1 E2*DEGRAD H2 NZ S1Z S2Z 0;
@@ -486,10 +486,10 @@ PROCEDURE DP R (RE) PHI (RE) D (RE);
   VARIABLE (RE) PH;
   VARIABLE (RE 5) S1Z;
   VARIABLE (RE 5) S2Z;
-  VARIABLE (RE 5) NZ;
+  VARIABLE (DA 5) NZ;
   VARIABLE (RE) I;
   LOOP I 1 5;
-    S1Z[I] := 0; S2Z[I] := 0; NZ[I] := 0;
+    S1Z[I] := 0; S2Z[I] := 0; NZ[I] := 0*DD[1];
   ENDLOOP;
   PH := PHI*DEGRAD;
   CE := 'DP';
@@ -504,7 +504,7 @@ ENDPROCEDURE;
   edges — sometimes called "no-edge BEND"). The caller supplies the
   multipole arrays directly; MC just sets CE and converts PHI from
   degrees to radians.                                                    }
-PROCEDURE MC R (RE) PHI (RE) D (RE) N (RE 5) S1 (RE 5) S2 (RE 5) NT (RE);
+PROCEDURE MC R (RE) PHI (RE) D (RE) N (DA 5) S1 (RE 5) S2 (RE 5) NT (RE);
   CE := 'MC';
   BEND R PHI*DEGRAD D 0 0 0 0 N S1 S2 NT;
 ENDPROCEDURE;
@@ -517,10 +517,10 @@ ENDPROCEDURE;
   specify magnets element-by-element rather than supplying full
   multipole vectors.                                                     }
 PROCEDURE MS R (RE) PHI (RE) D (RE)
-            N1 (RE) N2 (RE) N3 (RE) N4 (RE) N5 (RE);
+            N1 (DA) N2 (DA) N3 (DA) N4 (DA) N5 (DA);
   VARIABLE (RE 5) S1;
   VARIABLE (RE 5) S2;
-  VARIABLE (RE 5) N;
+  VARIABLE (DA 5) N;
   VARIABLE (RE) I;
   LOOP I 1 5;
     S1[I] := 0;
@@ -537,10 +537,10 @@ ENDPROCEDURE;
   circuits to a pure drift DL(L), avoiding division-by-zero — handy
   when the user passes 0 as a sentinel for "no bend".                    }
 PROCEDURE MSL L (RE) PHI (RE) D (RE)
-             N1 (RE) N2 (RE) N3 (RE) N4 (RE) N5 (RE);
+             N1 (DA) N2 (DA) N3 (DA) N4 (DA) N5 (DA);
   VARIABLE (RE 5) S1;
   VARIABLE (RE 5) S2;
-  VARIABLE (RE 5) N;
+  VARIABLE (DA 5) N;
   VARIABLE (RE) I;
   IF PHI = 0;
     DL L;
@@ -565,10 +565,10 @@ ENDPROCEDURE;
   The S1[1] := S2[1] := tan(PH/2) values mark the dipole-component
   edge angles; higher-multipole edges (S1[2..5]) stay at zero.          }
 PROCEDURE MPL L (RE) PHI (RE) D (RE)
-             N1 (RE) N2 (RE) N3 (RE) N4 (RE) N5 (RE);
+             N1 (DA) N2 (DA) N3 (DA) N4 (DA) N5 (DA);
   VARIABLE (RE 5) S1;
   VARIABLE (RE 5) S2;
-  VARIABLE (RE 5) N;
+  VARIABLE (DA 5) N;
   VARIABLE (RE) I;
   VARIABLE (RE) PH;
   IF PHI = 0;
@@ -595,12 +595,12 @@ ENDPROCEDURE;
 
   Lives in bend.rosy (not elements_magnetic.rosy) because MC is defined
   here, and MCLK calls MC. Forward-decl ordering matters in ROSY.       }
-PROCEDURE MCLK L (RE) PHI (RE) D (RE) K (RE 5) S1 (RE 5) S2 (RE 5) NT (RE);
+PROCEDURE MCLK L (RE) PHI (RE) D (RE) K (DA 5) S1 (RE 5) S2 (RE 5) NT (RE);
   VARIABLE (RE) I;
   VARIABLE (RE) RPOW;
   VARIABLE (RE) R;
-  VARIABLE (RE 5) KN;
-  VARIABLE (RE 5) TA;
+  VARIABLE (DA 5) KN;
+  VARIABLE (DA 5) TA;
   IF ABS(PHI) > 1E-9;
     R := L/(PHI*DEGRAD);
     RPOW := R;
@@ -611,7 +611,7 @@ PROCEDURE MCLK L (RE) PHI (RE) D (RE) K (RE 5) S1 (RE 5) S2 (RE 5) NT (RE);
     MC R PHI D KN S1 S2 NT;
   ELSE;
     LOOP I 1 NT;
-      TA[I] := 0;
+      TA[I] := 0*DD[1];
     ENDLOOP;
     MMSK L K TA NT D;
   ENDIF;

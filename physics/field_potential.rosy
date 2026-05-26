@@ -291,9 +291,9 @@ ENDFUNCTION;
   Output: HAMILTONIAN (DA), the Hamiltonian as a Taylor series in DD.
 
   Notes:
-    * 's `IF ABS(V)=0` distinction selects the fast HFAC path.
-      ROSY can't introspect a DA's "is exactly zero" cheaply; we use
-      the equivalent HFULL formula always (slightly slower but correct).
+    * COSY's `IF ABS(V)=0` distinction selects the precomputed HFAC path
+      for pure magnetic elements. Use WABS as the DA zero test so magnetic
+      elements such as CMS follow the same branch as cosy.fox.
     *  HFULL refers to a bare `C` in the formula
       `(AMU*C/Z0/EZERO)*M0*PREL`. The global C at libcosy is the RK
       Butcher-tableau coefficient array (RE 13), not a scalar. The
@@ -384,15 +384,19 @@ FUNCTION (DA) HAMILTONIAN A_VEC (DA) V_SCAL (DA) H_CURV (DA);
     QUIT 0;
   ENDIF;
   CO NOC+1;
-  ETA_LOCAL := ((E0 - 0.001*Z0*V_SCAL)/M0)/AMUMEV;
-  PREL := SQRT(ETA_LOCAL*(2 + ETA_LOCAL));
-  { Reorder so AMU*CLIGHT/EZERO is computed as pure RE first — ROSY's
-    DA/f64 op rejects divisors below 1e-15, and EZERO (1.6e-19) trips
-    that tolerance. The pure-RE division is fine.                       }
-  CHIM_LOCAL := (AMU*CLIGHT/EZERO/Z0)*M0*PREL;
-  HAMILTONIAN := A_VEC/CONS(CHIM_LOCAL) - (1 + H_CURV*DD[1])
-               *SQRT((CHIM_LOCAL/CONS(CHIM_LOCAL))*(CHIM_LOCAL/CONS(CHIM_LOCAL))
-                     - DD[2]*DD[2] - DD[4]*DD[4]);
+  IF WABS(V_SCAL, WAF) = 0;
+    HAMILTONIAN := A_VEC/CONS(CHIM) - (1 + H_CURV*DD[1])*HFAC;
+  ELSE;
+    ETA_LOCAL := ((E0 - 0.001*Z0*V_SCAL)/M0)/AMUMEV;
+    PREL := SQRT(ETA_LOCAL*(2 + ETA_LOCAL));
+    { Reorder so AMU*CLIGHT/EZERO is computed as pure RE first — ROSY's
+      DA/f64 op rejects divisors below 1e-15, and EZERO (1.6e-19) trips
+      that tolerance. The pure-RE division is fine.                     }
+    CHIM_LOCAL := (AMU*CLIGHT/EZERO/Z0)*M0*PREL;
+    HAMILTONIAN := A_VEC/CONS(CHIM_LOCAL) - (1 + H_CURV*DD[1])
+                 *SQRT((CHIM_LOCAL/CONS(CHIM_LOCAL))*(CHIM_LOCAL/CONS(CHIM_LOCAL))
+                       - DD[2]*DD[2] - DD[4]*DD[4]);
+  ENDIF;
   CO NOC-1;
 ENDFUNCTION;
 
@@ -1264,75 +1268,216 @@ PROCEDURE ODE X (DA 30) S (RE) XP (DA 30);
   ENDIF;
 ENDPROCEDURE;
 
-{ ----- RK: classical RK4 fixed-step Runge-Kutta integrator -----
-   uses adaptive Verner 7(8) via RKCO; libcosy uses classical
-  RK4 (4-stage, 4th-order) with fixed step size.
+{ ----- RKCO-compatible coefficients from COSY's mpi_dafox.f -----
+  ROSY's built-in RKCO currently returns a different DOP853 tableau than
+  COSY INFINITY's RKCO. The SDELE/DSDED element chain is sensitive to
+  these coefficients, so libcosy fills the same A/B/C/D/HSQR globals that
+  cosy.fox expects.                                                       }
+PROCEDURE RK_INIT_COEFFS;
+  VARIABLE (RE) I;
+  VARIABLE (RE) J;
+  HSQR := 1/9;
+  LOOP I 1 13;
+    RK_A[I] := 0; RK_C[I] := 0; RK_D[I] := 0;
+    LOOP J 1 12;
+      RK_B[I,J] := 0;
+    ENDLOOP;
+  ENDLOOP;
+  RK_A[1] := 0; RK_A[2] := 1/18; RK_A[3] := 1/12; RK_A[4] := 1/8;
+  RK_A[5] := 5/16; RK_A[6] := 3/8; RK_A[7] := 59/400; RK_A[8] := 93/200;
+  RK_A[9] := 5490023248/9719169821; RK_A[10] := 13/20;
+  RK_A[11] := 1201146811/1299019798; RK_A[12] := 1; RK_A[13] := 1;
 
-  Reason: ROSY's RKCO intrinsic returns DOP853 coefficients whose b-weight
-  vector sums to ~0.7126 instead of 1.0, producing systematic drift errors
-  of (1 - 0.7126) ≈ 28.7% per step in the integrated state. RK4 has
-  sum(b_J) = 1/6 + 2/6 + 2/6 + 1/6 = 1, so it's correct by construction.
-  The accuracy hit (4th-order vs. 8th-order) is acceptable for libcosy
-  use cases (fringe-field s-stepping with many small steps).
+  RK_B[2,1] := 1/18;
+  RK_B[3,1] := 1/48; RK_B[3,2] := 1/16;
+  RK_B[4,1] := 1/32; RK_B[4,3] := 3/32;
+  RK_B[5,1] := 5/16; RK_B[5,3] := -75/64; RK_B[5,4] := 75/64;
+  RK_B[6,1] := 3/80; RK_B[6,4] := 3/16; RK_B[6,5] := 3/20;
+  RK_B[7,1] := 29443841/614563906; RK_B[7,4] := 77736538/692538347;
+  RK_B[7,5] := -28693883/1125000000; RK_B[7,6] := 23124283/1800000000;
+  RK_B[8,1] := 16016141/946692911; RK_B[8,4] := 61564180/158732637;
+  RK_B[8,5] := 22789713/633445777; RK_B[8,6] := 545815736/2771057229;
+  RK_B[8,7] := -180193667/1043307555;
+  RK_B[9,1] := 39632708/573591083; RK_B[9,4] := -433636366/683701615;
+  RK_B[9,5] := -421739975/2616292301; RK_B[9,6] := 100302831/723423059;
+  RK_B[9,7] := 790204164/839813087; RK_B[9,8] := 800635310/3783071287;
+  RK_B[10,1] := 246121993/1340847787; RK_B[10,4] := -37695042795/15268766246;
+  RK_B[10,5] := -309121744/1061227803; RK_B[10,6] := -12992083/490766935;
+  RK_B[10,7] := 6005943493/2108947869; RK_B[10,8] := 393006217/1396673457;
+  RK_B[10,9] := 123872331/1001029789;
+  RK_B[11,1] := -1028468189/846180014; RK_B[11,4] := 8478235783/508512852;
+  RK_B[11,5] := 1311729495/1432422823; RK_B[11,6] := -10304129995/1701304382;
+  RK_B[11,7] := -48777925059/3047939560; RK_B[11,8] := 15336726248/1032824649;
+  RK_B[11,9] := -45442868181/3398467696; RK_B[11,10] := 3065993473/597172653;
+  RK_B[12,1] := 185892177/718116043; RK_B[12,4] := -3185094517/667107341;
+  RK_B[12,5] := -477755414/1098053517; RK_B[12,6] := -703635378/230739211;
+  RK_B[12,7] := 5731566787/1027545527; RK_B[12,8] := 5232866602/850066563;
+  RK_B[12,9] := -4093664535/808688257; RK_B[12,10] := 3962137247/1805957418;
+  RK_B[12,11] := 65686358/487910083;
+  RK_B[13,1] := 403863854/491063109; RK_B[13,4] := -5068492393/434740067;
+  RK_B[13,5] := -411421997/543043805; RK_B[13,6] := 652783627/914296604;
+  RK_B[13,7] := 11173962825/925320556; RK_B[13,8] := -13158990841/6184727034;
+  RK_B[13,9] := 3936647629/1978049680; RK_B[13,10] := -160528059/685178525;
+  RK_B[13,11] := 248638103/1413531060;
 
-  Parameters: same signature as  RK so SDELE can call uniformly.
-  N      — number of ODEs
-  X0, X1 — integration interval
-  Y0     — initial state (DA-30)
-  H0     — minimum step (currently unused — RK4 doesn't adapt)
-  HS     — suggested step (drives the fixed step count)
-  H1     — maximum step (currently unused)
-  EPS_PARAM, BS — error / backstep tolerances (unused for fixed-step)
-  Z      — DA-30×16 scratch
-  Y1     — output state
-  ERREST — error estimate output (set to 0 since RK4 is non-adaptive)  }
+  RK_C[1] := 14005451/335480064; RK_C[6] := -59238493/1068277825;
+  RK_C[7] := 181606767/758867731; RK_C[8] := 561292985/797845732;
+  RK_C[9] := -1041891430/1371343529; RK_C[10] := 760417239/1151165299;
+  RK_C[11] := 118820643/751138087; RK_C[12] := -528747749/2220607170;
+  RK_C[13] := 1/4;
+
+  RK_D[1] := 13451932/455176623; RK_D[6] := -808719846/976000145;
+  RK_D[7] := 1757004468/5645159321; RK_D[8] := 656045339/265891186;
+  RK_D[9] := -3867574721/1518517206; RK_D[10] := 465885868/322736535;
+  RK_D[11] := 53011238/667516719; RK_D[12] := 2/45; RK_D[13] := 0;
+ENDPROCEDURE;
+
+{ ----- RK: COSY-compatible adaptive 13-stage Runge-Kutta integrator -----
+  Mirrors cosy.fox's RK loop, including the RKLOG*.DAT step log side
+  effect used by FR-driven element integrations.                         }
 PROCEDURE RK N (RE) X0 (RE) X1 (RE) Y0 (DA 30) H0 (RE) HS (RE) H1 (RE)
             EPS_PARAM (RE) BS (RE) Z (DA 30 16) Y1 (DA 30) ERREST (RE);
   VARIABLE (RE) I;
-  VARIABLE (RE) NSTEPS;
-  VARIABLE (RE) ISTEP;
-  VARIABLE (RE) X_CUR;
+  VARIABLE (RE) J;
+  VARIABLE (RE) K;
+  VARIABLE (RE) X;
   VARIABLE (RE) H_STEP;
-  VARIABLE (DA 30) Y_CUR;
-  VARIABLE (DA 30) Y_TMP;
-  VARIABLE (DA 30) K1;
-  VARIABLE (DA 30) K2;
-  VARIABLE (DA 30) K3;
-  VARIABLE (DA 30) K4;
+  VARIABLE (RE) RFNORM;
+  VARIABLE (RE) HH0;
+  VARIABLE (RE) HH1;
+  VARIABLE (RE) ISTP;
+  VARIABLE (RE) SCR;
+  VARIABLE (ST) FORM;
+  VARIABLE (ST) STR;
+  VARIABLE (ST) FN;
+  PROCEDURE NORMRK NLOC (RE) X_VEC (DA 30) AX (RE);
+    VARIABLE (RE) INORM;
+    AX := 0;
+    LOOP INORM 1 NLOC;
+      AX := MAX(AX, WABS(X_VEC[INORM], WAF));
+    ENDLOOP;
+  ENDPROCEDURE;
+
+  IF LRKCO = 0;
+    RK_INIT_COEFFS;
+    LRKCO := 1;
+  ENDIF;
+  FN := 'RKLOG';
+  IF LENGTH(RKOFNST) > 0;
+    FN := FN & RKOFNST;
+  ELSEIF LRKO > 0;
+    FN := FN & SI(LRKO);
+  ENDIF;
+  FN := FN & '.DAT';
+  OPENF 77 FN 'REPLACE';
+  STR := '# STEP    S                 DS';
+  IF LRKO > 0;
+    WRITE 6 '## LRKO = ' & SI(LRKO) & ' ##';
+    STR := STR & '           POSITION(X,    Z,             Phi,'
+               & '           Radius)        By             Ex'
+               & '             Ez             Egain';
+    FORM := '(E15.7)';
+  ENDIF;
+  WRITE 77 '#RUNGE KUTTA   S1,S2 = ' & S(X0) & ', ' & S(X1);
+  WRITE 77 '#        HMIN,H,HMAX = ' & S(H0) & ', ' & S(HS) & ', ' & S(H1);
+  WRITE 77 '#             EPS,BS = ' & S(EPS_PARAM) & ', ' & S(BS);
+  WRITE 77 STR;
+  LOOP I 1 N;
+    Z[I,1] := Y0[I];
+    Z[I,2] := 0*DD[1];
+  ENDLOOP;
+  H_STEP := ABS(HS);
+  HH0 := ABS(H0);
+  HH1 := ABS(H1);
+  IF X1-X0 < 0;
+    H_STEP := -H_STEP;
+    HH0 := -HH0;
+    HH1 := -HH1;
+  ENDIF;
+  X := X0;
+  RFNORM := 0;
   ERREST := 0;
-  IF X1 = X0;
+  ISTP := 0;
+  STR := SF(ISTP, '(I6)') & SF(X, '(E18.10)') & SF(H_STEP, '(E13.5)');
+  IF LRKO > 0;
+    SCR := CONS(LEN2(Z[11,1], Z[12,1]));
+    RKO[1] := SCR;
+    RKO[2] := SCR;
+    LOOP I 11 13;
+      STR := STR & SF(CONS(Z[I,1]), FORM);
+    ENDLOOP;
+    STR := STR & SF(SCR, FORM) & SF(CONS(BFY), FORM) & SF(CONS(EFX), FORM)
+               & SF(CONS(EFZ), FORM) & SF(CONS(Z[15,1]), FORM);
+  ENDIF;
+  WRITE 77 STR;
+  WHILE X # X1;
+    IF RFNORM # 0;
+      H_STEP := H_STEP*MIN(4, (EPS_PARAM/RFNORM)^HSQR);
+    ENDIF;
+    IF ABS(H_STEP) > ABS(HH1);
+      H_STEP := HH1;
+    ELSEIF ABS(H_STEP) < ABS(HH0)*0.99;
+      H_STEP := HH0;
+      WRITE 6 ' --- WARNING, minimum stepsize reached in RK';
+    ENDIF;
+    IF (X + H_STEP - X1)*H_STEP > 0;
+      H_STEP := X1 - X;
+    ENDIF;
+    ISTP := ISTP + 1;
+    LOOP J 1 13;
+      LOOP I 1 N;
+        Y0[I] := 0*DD[1];
+        LOOP K 1 J-1;
+          Y0[I] := Y0[I] + Z[I,K+3]*RK_B[J,K];
+        ENDLOOP;
+        Y0[I] := H_STEP*Y0[I] + Z[I,1];
+      ENDLOOP;
+      ODE Y0 X+H_STEP*RK_A[J] Y1;
+      LOOP I 1 N;
+        Z[I,J+3] := Y1[I];
+      ENDLOOP;
+    ENDLOOP;
     LOOP I 1 N;
-      Y1[I] := Y0[I];
-    ENDLOOP;
-  ELSE;
-    NSTEPS := MAX(1, NINT(ABS((X1 - X0)/HS)));
-    H_STEP := (X1 - X0)/NSTEPS;
-    LOOP I 1 N;
-      Y_CUR[I] := Y0[I];
-    ENDLOOP;
-    X_CUR := X0;
-    LOOP ISTEP 1 NSTEPS;
-      ODE Y_CUR X_CUR K1;
-      LOOP I 1 N;
-        Y_TMP[I] := Y_CUR[I] + 0.5*H_STEP*K1[I];
+      Z[I,2] := 0*DD[1];
+      Z[I,3] := 0*DD[1];
+      LOOP J 1 13;
+        Z[I,2] := Z[I,2] + Z[I,J+3]*RK_D[J];
+        Z[I,3] := Z[I,3] + Z[I,J+3]*RK_C[J];
       ENDLOOP;
-      ODE Y_TMP X_CUR+0.5*H_STEP K2;
-      LOOP I 1 N;
-        Y_TMP[I] := Y_CUR[I] + 0.5*H_STEP*K2[I];
-      ENDLOOP;
-      ODE Y_TMP X_CUR+0.5*H_STEP K3;
-      LOOP I 1 N;
-        Y_TMP[I] := Y_CUR[I] + H_STEP*K3[I];
-      ENDLOOP;
-      ODE Y_TMP X_CUR+H_STEP K4;
-      LOOP I 1 N;
-        Y_CUR[I] := Y_CUR[I] + H_STEP/6*(K1[I] + 2*K2[I] + 2*K3[I] + K4[I]);
-      ENDLOOP;
-      X_CUR := X_CUR + H_STEP;
+      Y1[I] := (Z[I,3] - Z[I,2])*H_STEP;
+      Z[I,3] := Z[I,3]*H_STEP + Z[I,1];
     ENDLOOP;
-    LOOP I 1 N;
-      Y1[I] := Y_CUR[I];
-    ENDLOOP;
+    NORMRK N Y1 RFNORM;
+    IF (RFNORM > BS) AND (ABS(H_STEP/H0) > 1.2);
+      H_STEP := H_STEP/3;
+      RFNORM := 0;
+    ELSE;
+      LOOP I 1 N;
+        Z[I,1] := Z[I,3];
+      ENDLOOP;
+      X := X + H_STEP;
+      STR := SF(ISTP, '(I6)') & SF(X, '(E18.10)') & SF(H_STEP, '(E13.5)');
+      IF LRKO > 0;
+        SCR := CONS(LEN2(Z[11,1], Z[12,1]));
+        RKO[1] := MIN(RKO[1], SCR);
+        RKO[2] := MAX(RKO[2], SCR);
+        LOOP I 11 13;
+          STR := STR & SF(CONS(Z[I,1]), FORM);
+        ENDLOOP;
+        STR := STR & SF(SCR, FORM) & SF(CONS(BFY), FORM) & SF(CONS(EFX), FORM)
+                   & SF(CONS(EFZ), FORM) & SF(CONS(Z[15,1]), FORM);
+      ENDIF;
+      WRITE 77 STR;
+      ERREST := ERREST + RFNORM;
+    ENDIF;
+  ENDWHILE;
+  WRITE 77 '#ERROR ESTIMATE ' & S(ERREST);
+  LOOP I 1 N;
+    Y1[I] := Z[I,1];
+  ENDLOOP;
+  CLOSEF 77;
+  IF LRKO > 0;
+    LRKO := LRKO + 1;
   ENDIF;
 ENDPROCEDURE;
 
@@ -1405,7 +1550,7 @@ PROCEDURE SDELE S1 (RE) S2 (RE) H1 (RE) H2 (RE) H3 (RE) D_AP (RE);
       PP0 := CONS(P0);
       EE0 := CONS(E0);
       TFAC0 := TFAC;
-      RP CONS(E0)+VLOC*0.001 CONS(M0) CONS(Z0);
+      RP CONS(E0)+VLOC*0.001+0*DA(1) CONS(M0)+0*DA(1) CONS(Z0)+0*DA(1);
       VLOC := 0;
       MSC[2] := MSC[2]*(PP0/CONS(P0));
       IF ND > 1;
