@@ -34,22 +34,22 @@ INCLUDE 'elements_basic.rosy';
 INCLUDE 'elements_magnetic.rosy';
 
 { ----- BEND: full general magnet --------------------- }
-PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
-              N (DA 5) S1 (RE 5) S2 (RE 5) NT (RE);
+PROCEDURE BEND R (DA) PHI (DA) D (DA) E1 (DA) H1 (DA) E2 (DA) H2 (DA)
+              N (DA 5) S1 (DA 5) S2 (DA 5) NT (RE);
 
   { Working scalars / arrays declared at BEND scope so nested helpers can
     capture them.  uses NMP (number of monomials per parameter)
     sizes — translates to (DA) for DA-typed scalars, (DA 8) for DA arrays.}
   VARIABLE (RE) I;
   VARIABLE (RE) NTS;
-  VARIABLE (RE) LGH;
+  VARIABLE (DA) LGH;
 
   { ----- FK: circle FK(X) -----------------------------
     Used to compute the entry/exit edge effects. For zero curvature XI,
     FK reduces to TAN(E)*X (linear edge angle); otherwise it's the more
     general circular-edge formula.                                          }
-  FUNCTION (DA) FK X (DA) EE (RE) XI (RE);
-    IF XI # 0;
+  FUNCTION (DA) FK X (DA) EE (DA) XI (DA);
+    IF CONS(XI) # 0;
       FK := (COS(EE) - SQRT(1 - SQR(X*XI + SIN(EE))))/XI;
     ELSE;
       FK := TAN(EE)*X;
@@ -88,8 +88,8 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
     ray OUT and the path length LGH.  writes this as a sequence of
     geometric problems (line/line, line/circle, circle/circle intersections,
     angle captures) — implemented here with the same 6 nested helpers.    }
-  PROCEDURE DIPOLE R0 (RE) PHIA (RE) E1A (RE) XI1 (RE) E2A (RE) XI2 (RE)
-                   IN (DA 8) OUT (DA 8) LGHO (RE);
+  PROCEDURE DIPOLE R0 (DA) PHIA (DA) E1A (DA) XI1 (DA) E2A (DA) XI2 (DA)
+                   IN (DA 8) OUT (DA 8) LGHO (DA);
     VARIABLE (RE) IER;
     VARIABLE (DA) Z1;  VARIABLE (DA) X1;
     VARIABLE (DA) ZRI; VARIABLE (DA) XRI;
@@ -199,11 +199,11 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
       entry edge surface (line if XI1=0, circle otherwise). }
     CO := COS(E1A) + 0*DD[1];
     SI := SIN(E1A) + 0*DD[1];
-    IF XI1 # 0;
+    IF CONS(XI1) # 0;
       RR := 1/XI1 + 0*DD[1];
       ZR := CO/XI1; XR := -SI/XI1;
       LINCIR IN[2] DA_NEG_ONE IN[1] ZR XR RR ZA XA ZB XB;
-      IF XI1 > 0;
+      IF CONS(XI1) > 0;
         Z1 := ZA; X1 := XA;
       ELSE;
         Z1 := ZB; X1 := XB;
@@ -237,7 +237,7 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
     { Find the exit-tangent point W2. }
     CO := COS(E2A) + 0*DD[1];
     SI := SIN(E2A) + 0*DD[1];
-    IF XI2 # 0;
+    IF CONS(XI2) # 0;
       THE := 1/XI2 + 0*DD[1];
       Z2 := -CO/XI2; X2 := -SI/XI2;
       CIRCIR ZR XR RR Z2 X2 THE ZA XA ZB XB;
@@ -279,8 +279,8 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
   ENDPROCEDURE;
 
   { ----- DIPOLEY: y-plane KICK + DIPOLE + KICK ------ }
-  PROCEDURE DIPOLEY R0 (RE) PHIA (RE) E1A (RE) XI1 (RE) E2A (RE) XI2 (RE)
-                    IND (DA 8) OUTD (DA 8) LGHD (RE);
+  PROCEDURE DIPOLEY R0 (DA) PHIA (DA) E1A (DA) XI1 (DA) E2A (DA) XI2 (DA)
+                    IND (DA 8) OUTD (DA 8) LGHD (DA);
     KICK 2 FK(DD[1], E1A, XI1)/R0 IND;
     DIPOLE R0 PHIA E1A XI1 E2A XI2 IND OUTD LGHD;
     KICK 2 FK(DD[1], E2A, XI2)/R0 OUTD;
@@ -295,7 +295,7 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
     QUIT 0;
   ENDIF;
 
-  DR := D;
+  DR := CONS(D);
   LOOP I 1 8;
     MSC[I] := DD[I];
   ENDLOOP;
@@ -317,7 +317,7 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
       LOOP I 1 TWOND;
         MAP[I] := MSC[I];
       ENDLOOP;
-      LOCSET (COS(PHI) - 1)*R SIN(PHI)*R PHI R*PHI 0 0;
+      LOCSET CONS((COS(PHI) - 1)*R) CONS(SIN(PHI)*R) CONS(PHI) CONS(R*PHI) 0 0;
       UPDATE 0 1;
       CE := 'BEND';
     ELSEIF (LFR = -1) OR (LFR = -2);
@@ -325,7 +325,7 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
         Set up dipole + multipoles in PPOL/MPOL, then call FFELE with
         L=R·PHI, H_LOCAL=1/R, LF1=-1, LF2=-2. FFELE's LFR=-1/-2 path
         runs SDELE with NSDP=-1 or -2 (POTXZ NSDP=-1/-2 bend fringe).  }
-      VARIABLE (RE) F_HF;
+      VARIABLE (DA) F_HF;
       VARIABLE (RE) NEG1_HF;
       VARIABLE (RE) NEG2_HF;
       NEG1_HF := -1;
@@ -340,12 +340,12 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
         F_HF := F_HF/R;
       ENDLOOP;
       LOFF := 2;
-      FFELE R*PHI D 1/R NEG1_HF NEG2_HF '  ';
+      FFELE CONS(R*PHI) CONS(D) CONS(1/R) NEG1_HF NEG2_HF '  ';
     ELSEIF (LFR = 3) OR (LFR = 2.5);
       { BENDFF3 path: magnetic dipole + multipoles
         with high-precision soft-edge fringe via NSDP=-4 + BENDIST.   }
-      VARIABLE (RE) LDL_BFF;
-      VARIABLE (RE) NEG_LDL_BFF;
+      VARIABLE (DA) LDL_BFF;
+      VARIABLE (DA) NEG_LDL_BFF;
       VARIABLE (RE) ARC_TOTAL_BFF;
       VARIABLE (RE) STEP_MIN_BFF;
       VARIABLE (RE) STEP_MID_BFF;
@@ -363,7 +363,7 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
       PPOL[4] := D + 0*DD[1];
       PPOL[7] := SIN(-E1) + 0*DD[1];
       PPOL[8] := COS(-E1) + 0*DD[1];
-      IF H1 # 0;
+      IF CONS(H1) # 0;
         PPOL[7] := SIN(-E1)/H1 + 0*DD[1];
         PPOL[8] := COS(-E1)/H1 + 0*DD[1];
       ENDIF;
@@ -371,7 +371,7 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
       PPOL[10] := R*SIN(PHI) + 0*DD[1];
       PPOL[11] := SIN(PHI-E2) + 0*DD[1];
       PPOL[12] := -COS(E2-PHI) + 0*DD[1];
-      IF H2 # 0;
+      IF CONS(H2) # 0;
         PPOL[11] := SIN(PHI-E2)/H2 + 0*DD[1];
         PPOL[12] := -COS(E2-PHI)/H2 + 0*DD[1];
       ENDIF;
@@ -385,25 +385,25 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
       PPOL[20] := NT + 0*DD[1];
       LDL_BFF := 10*D;
       NEG_LDL_BFF := -LDL_BFF;
-      ARC_TOTAL_BFF := R*PHI + 2*LDL_BFF;
-      STEP_MIN_BFF := MIN(R/10000, D/200);
-      STEP_MID_BFF := MIN(R/20, D);
-      STEP_MAX_BFF := MIN(R, 7*D);
-      LOCSET 0 NEG_LDL_BFF 0 0 0 0;
+      ARC_TOTAL_BFF := CONS(R*PHI + 2*LDL_BFF);
+      STEP_MIN_BFF := MIN(CONS(R)/10000, CONS(D)/200);
+      STEP_MID_BFF := MIN(CONS(R)/20, CONS(D));
+      STEP_MAX_BFF := MIN(CONS(R), 7*CONS(D));
+      LOCSET 0 CONS(NEG_LDL_BFF) 0 0 0 0;
       IF LFR = 3;
-        LOCSET R*(COS(0.5*PHI)-1) R*SIN(0.5*PHI) 0.5*PHI 0.5*R*PHI 0 0;
-        SDELEREF 0.5*R*PHI NEG_LDL_BFF D/200 D 7*D D;
+        LOCSET CONS(R*(COS(0.5*PHI)-1)) CONS(R*SIN(0.5*PHI)) CONS(0.5*PHI) CONS(0.5*R*PHI) 0 0;
+        SDELEREF CONS(0.5*R*PHI) CONS(NEG_LDL_BFF) CONS(D/200) CONS(D) CONS(7*D) CONS(D);
       ENDIF;
       UMS;
       DLACT MSC NEG_LDL_BFF;
       SNM MSC MS_BFF;
       SSNM SSCR SM_BFF;
-      SDELE 0 ARC_TOTAL_BFF STEP_MIN_BFF STEP_MID_BFF STEP_MAX_BFF D;
+      SDELE 0 ARC_TOTAL_BFF STEP_MIN_BFF STEP_MID_BFF STEP_MAX_BFF CONS(D);
       UPDATEMAP MSC MS_BFF MSC SSCR SM_BFF SSCR;
       DLACT MSC NEG_LDL_BFF;
-      SLOC := R*PHI;
-      XLOC := XLOC + LDL_BFF*SIN(PLOC);
-      ZLOC := ZLOC - LDL_BFF*COS(PLOC);
+      SLOC := CONS(R*PHI);
+      XLOC := XLOC + CONS(LDL_BFF)*SIN(PLOC);
+      ZLOC := ZLOC - CONS(LDL_BFF)*COS(PLOC);
       UPDATE 1 1;
       LOOP I 1 TWOND;
         MAP[I] := MSC[I];
@@ -418,7 +418,7 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
           4. POLVAL composes ISC into MSC
           5. DIPOLEY exit edge                                       }
       VARIABLE (DA 8) ISC;
-      VARIABLE (RE) F_BEND;
+      VARIABLE (DA) F_BEND;
       VARIABLE (RE) NV_LIM;
       NPOL := NT + 1;
       PPOL[1] := CONS(CHIM)/R + 0*DD[1];
@@ -435,13 +435,13 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
       LOOP I TWOND+1 NV_LIM;
         ISC[I] := MSC[I];
       ENDLOOP;
-      SIELE R*PHI D;
+      SIELE CONS(R*PHI) CONS(D);
       POLVAL 1 MSC TWOND ISC NV_LIM MSC TWOND;
       DIPOLEY R 0 0 0 E2 H2 MSC MSC LGH;
       LOOP I 1 TWOND;
         MAP[I] := MSC[I];
       ENDLOOP;
-      LOCSET (COS(PHI) - 1)*R SIN(PHI)*R PHI R*PHI 0 0;
+      LOCSET CONS((COS(PHI) - 1)*R) CONS(SIN(PHI)*R) CONS(PHI) CONS(R*PHI) 0 0;
       IF (NRAY = 0) AND (LSPN = 0);
         UPDATE 0 1;
       ELSE;
@@ -456,13 +456,13 @@ PROCEDURE BEND R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE)
 ENDPROCEDURE;
 
 { ----- DI: curved-edge dipole convenience wrapper --- }
-PROCEDURE DI R (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE);
-  VARIABLE (RE 5) S1Z;
-  VARIABLE (RE 5) S2Z;
+PROCEDURE DI R (DA) PHI (DA) D (DA) E1 (DA) H1 (DA) E2 (DA) H2 (DA);
+  VARIABLE (DA 5) S1Z;
+  VARIABLE (DA 5) S2Z;
   VARIABLE (DA 5) NZ;
   VARIABLE (RE) I;
   LOOP I 1 5;
-    S1Z[I] := 0; S2Z[I] := 0; NZ[I] := 0*DD[1];
+    S1Z[I] := 0*DD[1]; S2Z[I] := 0*DD[1]; NZ[I] := 0*DD[1];
   ENDLOOP;
   CE := 'DI';
   BEND R PHI*DEGRAD D E1*DEGRAD H1 E2*DEGRAD H2 NZ S1Z S2Z 0;
@@ -473,8 +473,8 @@ ENDPROCEDURE;
   instead of bending radius R. Falls back to a pure drift DL(L) when
   PHI = 0. The R = L/(PHI·DEGRAD) substitution gives the same magnet
   with a more lattice-builder-friendly signature.                         }
-PROCEDURE DIL L (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE);
-  IF PHI = 0;
+PROCEDURE DIL L (DA) PHI (DA) D (DA) E1 (DA) H1 (DA) E2 (DA) H2 (DA);
+  IF CONS(PHI) = 0;
     DL L;
   ELSE;
     DI L/(PHI*DEGRAD) PHI D E1 H1 E2 H2;
@@ -482,14 +482,14 @@ PROCEDURE DIL L (RE) PHI (RE) D (RE) E1 (RE) H1 (RE) E2 (RE) H2 (RE);
 ENDPROCEDURE;
 
 { ----- DP: parallel-faced dipole convenience wrapper }
-PROCEDURE DP R (RE) PHI (RE) D (RE);
-  VARIABLE (RE) PH;
-  VARIABLE (RE 5) S1Z;
-  VARIABLE (RE 5) S2Z;
+PROCEDURE DP R (DA) PHI (DA) D (DA);
+  VARIABLE (DA) PH;
+  VARIABLE (DA 5) S1Z;
+  VARIABLE (DA 5) S2Z;
   VARIABLE (DA 5) NZ;
   VARIABLE (RE) I;
   LOOP I 1 5;
-    S1Z[I] := 0; S2Z[I] := 0; NZ[I] := 0*DD[1];
+    S1Z[I] := 0*DD[1]; S2Z[I] := 0*DD[1]; NZ[I] := 0*DD[1];
   ENDLOOP;
   PH := PHI*DEGRAD;
   CE := 'DP';
@@ -504,7 +504,7 @@ ENDPROCEDURE;
   edges — sometimes called "no-edge BEND"). The caller supplies the
   multipole arrays directly; MC just sets CE and converts PHI from
   degrees to radians.                                                    }
-PROCEDURE MC R (RE) PHI (RE) D (RE) N (DA 5) S1 (RE 5) S2 (RE 5) NT (RE);
+PROCEDURE MC R (DA) PHI (DA) D (DA) N (DA 5) S1 (DA 5) S2 (DA 5) NT (RE);
   CE := 'MC';
   BEND R PHI*DEGRAD D 0 0 0 0 N S1 S2 NT;
 ENDPROCEDURE;
@@ -516,15 +516,15 @@ ENDPROCEDURE;
   expects, with zero S1/S2 inhomogeneity. Convenient for users who
   specify magnets element-by-element rather than supplying full
   multipole vectors.                                                     }
-PROCEDURE MS R (RE) PHI (RE) D (RE)
+PROCEDURE MS R (DA) PHI (DA) D (DA)
             N1 (DA) N2 (DA) N3 (DA) N4 (DA) N5 (DA);
-  VARIABLE (RE 5) S1;
-  VARIABLE (RE 5) S2;
+  VARIABLE (DA 5) S1;
+  VARIABLE (DA 5) S2;
   VARIABLE (DA 5) N;
   VARIABLE (RE) I;
   LOOP I 1 5;
-    S1[I] := 0;
-    S2[I] := 0;
+    S1[I] := 0*DD[1];
+    S2[I] := 0*DD[1];
   ENDLOOP;
   N[1] := N1; N[2] := N2; N[3] := N3; N[4] := N4; N[5] := N5;
   CE := 'MS';
@@ -536,18 +536,18 @@ ENDPROCEDURE;
   radius R, with the R = L/(PHI·DEGRAD) substitution. PHI=0 short-
   circuits to a pure drift DL(L), avoiding division-by-zero — handy
   when the user passes 0 as a sentinel for "no bend".                    }
-PROCEDURE MSL L (RE) PHI (RE) D (RE)
+PROCEDURE MSL L (DA) PHI (DA) D (DA)
              N1 (DA) N2 (DA) N3 (DA) N4 (DA) N5 (DA);
-  VARIABLE (RE 5) S1;
-  VARIABLE (RE 5) S2;
+  VARIABLE (DA 5) S1;
+  VARIABLE (DA 5) S2;
   VARIABLE (DA 5) N;
   VARIABLE (RE) I;
-  IF PHI = 0;
+  IF CONS(PHI) = 0;
     DL L;
   ELSE;
     LOOP I 1 5;
-      S1[I] := 0;
-      S2[I] := 0;
+      S1[I] := 0*DD[1];
+      S2[I] := 0*DD[1];
     ENDLOOP;
     N[1] := N1; N[2] := N2; N[3] := N3; N[4] := N4; N[5] := N5;
     CE := 'MSL';
@@ -564,22 +564,22 @@ ENDPROCEDURE;
 
   The S1[1] := S2[1] := tan(PH/2) values mark the dipole-component
   edge angles; higher-multipole edges (S1[2..5]) stay at zero.          }
-PROCEDURE MPL L (RE) PHI (RE) D (RE)
+PROCEDURE MPL L (DA) PHI (DA) D (DA)
              N1 (DA) N2 (DA) N3 (DA) N4 (DA) N5 (DA);
-  VARIABLE (RE 5) S1;
-  VARIABLE (RE 5) S2;
+  VARIABLE (DA 5) S1;
+  VARIABLE (DA 5) S2;
   VARIABLE (DA 5) N;
   VARIABLE (RE) I;
-  VARIABLE (RE) PH;
-  IF PHI = 0;
+  VARIABLE (DA) PH;
+  IF CONS(PHI) = 0;
     DL L;
   ELSE;
     PH := PHI*DEGRAD;
     S1[1] := TAN(PH/2);
     S2[1] := TAN(PH/2);
     LOOP I 2 5;
-      S1[I] := 0;
-      S2[I] := 0;
+    S1[I] := 0*DD[1];
+    S2[I] := 0*DD[1];
     ENDLOOP;
     N[1] := N1; N[2] := N2; N[3] := N3; N[4] := N4; N[5] := N5;
     CE := 'MPL';
@@ -595,13 +595,13 @@ ENDPROCEDURE;
 
   Lives in bend.rosy (not elements_magnetic.rosy) because MC is defined
   here, and MCLK calls MC. Forward-decl ordering matters in ROSY.       }
-PROCEDURE MCLK L (RE) PHI (RE) D (RE) K (DA 5) S1 (RE 5) S2 (RE 5) NT (RE);
+PROCEDURE MCLK L (DA) PHI (DA) D (DA) K (DA 5) S1 (DA 5) S2 (DA 5) NT (RE);
   VARIABLE (RE) I;
-  VARIABLE (RE) RPOW;
-  VARIABLE (RE) R;
+  VARIABLE (DA) RPOW;
+  VARIABLE (DA) R;
   VARIABLE (DA 5) KN;
   VARIABLE (DA 5) TA;
-  IF ABS(PHI) > 1E-9;
+  IF ABS(CONS(PHI)) > 1E-9;
     R := L/(PHI*DEGRAD);
     RPOW := R;
     LOOP I 1 NT;

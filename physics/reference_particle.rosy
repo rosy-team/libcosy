@@ -320,22 +320,22 @@ ENDPROCEDURE;
   These call RP with the standard atomic-mass and charge values for each
   particle species and stamp the spin-Lorentz factor G0.  uses
   procedure-call syntax (e.g. `RP E 1.00727646688 1`) — ports verbatim. }
-PROCEDURE RPP E;     { proton  }
+PROCEDURE RPP E (DA);     { proton  }
   RP E+0*DA(1) 1.00727646688+0*DA(1) 1+0*DA(1);
   G0 := 1.792847337;
 ENDPROCEDURE;
 
-PROCEDURE RPE E;     { electron }
+PROCEDURE RPE E (DA);     { electron }
   RP E+0*DA(1) 5.485799110D-4+0*DA(1) (-1)+0*DA(1);
   G0 := 0.001159652187;
 ENDPROCEDURE;
 
-PROCEDURE RPPI E Z;   { pion (charge configurable) }
+PROCEDURE RPPI E (DA) Z (DA);   { pion (charge configurable) }
   RP E+0*DA(1) 0.149834758+0*DA(1) Z+0*DA(1);
   G0 := 0;
 ENDPROCEDURE;
 
-PROCEDURE RPMU E;    { muon }
+PROCEDURE RPMU E (DA);    { muon }
   RP E+0*DA(1) 0.1134289168+0*DA(1) (-1)+0*DA(1);
   G0 := 0.0011659160;
 ENDPROCEDURE;
@@ -353,7 +353,7 @@ ENDPROCEDURE;
   body bootstraps with a dummy RP 1 1 1 (so ETA_local stays in scope at
   the right CHI value), computes pφ via χ_m / (M c²) form, derives the
   kinetic energy ETA_local, then re-runs RP with the correct values.   }
-PROCEDURE RPR CHI (RE) M (RE) Z (RE);
+PROCEDURE RPR CHI (DA) M (DA) Z (DA);
   VARIABLE (DA) PHI_L;
   VARIABLE (DA) ETA_L;
   VARIABLE (RE) NOM;
@@ -372,7 +372,7 @@ ENDPROCEDURE;
 { ----- Momentum-based RP ----------------------------
   RPM(P_MeVc, M, Z): set the reference particle from the canonical
   momentum p [MeV/c]. Converts to magnetic rigidity and delegates to RPR. }
-PROCEDURE RPM MEVC (RE) M (RE) Z (RE);
+PROCEDURE RPM MEVC (DA) M (DA) Z (DA);
   RP 1+0*DA(1) 1+0*DA(1) 1+0*DA(1);
   RPR MEVC*(1E6/CLIGHT)/Z M Z;
 ENDPROCEDURE;

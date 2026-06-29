@@ -1284,6 +1284,83 @@ PROCEDURE MLF_ARRAY MF (DA 8) C (DA 8) M (DA 8) F (DA 8) IT (RE);
   ENDIF;
 ENDPROCEDURE;
 
+{ ----- Coupled 4D linear tune extraction ----------------
+  COSY's TS/TP path uses DANF+MBLOCK to decouple coupled 4D maps before
+  extracting tunes. ROSY's current MBLOCK helper is a generic real-Schur
+  reducer, not COSY's symplectic decoupler, so the coupled linear tunes
+  are extracted directly from the symplectic characteristic polynomial:
+
+    lambda^4 - tr(M) lambda^3 + s2 lambda^2 - tr(M) lambda + 1 = 0
+    y = lambda + 1/lambda
+    y^2 - tr(M)y + (s2 - 2) = 0
+    cos(mu) = y/2
+
+  The output is CD so hyperbolic tunes retain their imaginary component. }
+PROCEDURE TUNE_FROM_COS_CPL CVAL (RE) TUNE (CD);
+  VARIABLE (CM) IM;
+  IMUNIT IM;
+
+  IF ABS(CVAL) <= 1;
+    TUNE := ACOS(CVAL)/(2*PI) + 0*DD[1] + 0*IM;
+  ELSEIF CVAL > 1;
+    TUNE := -IM*LOG(CVAL + SQRT(SQR(CVAL) - 1))/(2*PI) + 0*DD[1];
+  ELSE;
+    TUNE := (PI - IM*LOG(-CVAL + SQRT(SQR(CVAL) - 1)))/(2*PI) + 0*DD[1];
+  ENDIF;
+ENDPROCEDURE;
+
+PROCEDURE LINEAR_TUNES_4D MU (CD 4);
+  VARIABLE (RE 4 4) MLIN;
+  VARIABLE (RE) I;
+  VARIABLE (RE) J;
+  VARIABLE (RE) TR;
+  VARIABLE (RE) TR2;
+  VARIABLE (RE) S2;
+  VARIABLE (RE) DISC;
+  VARIABLE (RE) ROOT;
+  VARIABLE (RE) CPLUS;
+  VARIABLE (RE) CMINUS;
+  VARIABLE (CD) TPLUS;
+  VARIABLE (CD) TMINUS;
+
+  LOOP I 1 4;
+    LOOP J 1 4;
+      MLIN[I, J] := CONS(DER(J, MAP[I]));
+    ENDLOOP;
+  ENDLOOP;
+
+  TR := 0;
+  TR2 := 0;
+  LOOP I 1 4;
+    TR := TR + MLIN[I, I];
+    LOOP J 1 4;
+      TR2 := TR2 + MLIN[I, J]*MLIN[J, I];
+    ENDLOOP;
+  ENDLOOP;
+
+  S2 := (SQR(TR) - TR2)/2;
+  DISC := SQR(TR) - 4*(S2 - 2);
+  IF DISC < 0;
+    WRITE 6 ' *** ERROR in LINEAR_TUNES_4D, complex y roots unsupported';
+    QUIT 0;
+  ENDIF;
+
+  ROOT := SQRT(DISC);
+  CPLUS := (TR + ROOT)/4;
+  CMINUS := (TR - ROOT)/4;
+  TUNE_FROM_COS_CPL CPLUS TPLUS;
+  TUNE_FROM_COS_CPL CMINUS TMINUS;
+
+  { COSY orders the stable tune first for mixed stable/hyperbolic pairs. }
+  IF (ABS(CMINUS) <= 1) AND (ABS(CPLUS) > 1);
+    MU[1] := TMINUS;
+    MU[2] := TPLUS;
+  ELSE;
+    MU[1] := TPLUS;
+    MU[2] := TMINUS;
+  ENDIF;
+ENDPROCEDURE;
+
 { ----- TS: tune dependence on parameters AND amplitude
   TS(MU) computes the parameter- AND amplitude-dependence of the tunes
   from the active MAP, returning per-plane tune polynomials in MU.
@@ -1318,75 +1395,98 @@ PROCEDURE TS MU (CD 4);
   VARIABLE (RE)   J;
   VARIABLE (RE)   NOM;
   VARIABLE (CM)   IM;
+  VARIABLE (RE)   LC;
+  VARIABLE (RE)   I1;
+  VARIABLE (RE)   I2;
+  VARIABLE (RE)   K;
 
   IMUNIT IM;
   LWNTS := 0;
-  DANF MAP MN_LOCAL MA_LOCAL 1 S1_RS 1E-7;
-  NOM := NOC;
 
+  LC := 0;
   LOOP I 1 ND;
-    S1[1] := REAL(MN_LOCAL[2*I-1]);
-
-    { Strip even-indexed canonical variables (the conjugate momenta of
-      OTHER planes) by plugging 0 for them via DAPLU. }
-    LOOP J 2 TWOND 2;
-      DAPLU S1 J 0 S2;
-      S1[1] := S2[1];
+    I2 := 2*I;
+    I1 := I2 - 1;
+    LOOP K I2+1 TWOND;
+      IF (CONS(DER(K, MAP[I1])) # 0)
+       OR (CONS(DER(K, MAP[I2])) # 0)
+       OR (CONS(DER(I1, MAP[K])) # 0)
+       OR (CONS(DER(I2, MAP[K])) # 0);
+        LC := 1;
+      ENDIF;
     ENDLOOP;
-
-    IF ABS(S1[1]) = 0;
-      S1[1] := DA(2*I-1);
-    ENDIF;
-
-    S2[1] := 0*DD[1];
-    CO NOC+1;
-
-    WHILE (ABS(S2[1]) = 0) AND (NOC > 1);
-      CO NOC-1;
-      DADIU 2*I-1 S1 S2;
-    ENDWHILE;
-
-    IF NOC < NOM;
-      CO NOM;
-      LWNTS := LWNTS + 1;
-    ENDIF;
-
-    { Extract sign-encoding coefficient at variable 2*I.  uses
-      `COEF(REAL(MN(2*I-1)), 2*I)` with COSY's right-to-left TRANSPORT id;
-      ROSY's left-to-right id can't address single variables beyond x_1,
-      so we use DER+CONS instead. }
-    J := CONS(DER(2*I, MN_LOCAL[2*I-1]));
-    CO NOC-1;
-
-    IF J = 0;
-      { Hyperbolic-tune branch: J=0 means no DA(2*I) coefficient;
-        the tune is logarithmic.  builds this as
-        `MU(I) - J*LOG(S2)` after IMUNIT promotes J to imaginary
-        unit. Without ROSY's TYPE-overloading we instead compute
-        directly with IM (the global imag-unit CM). }
-      IF CONS(S2[1]) < 0;
-        S2[1] := -S2[1];
-        MU[I] := PI + 0*DD[1] + 0*IM;
-      ELSE;
-        MU[I] := 0*DD[1] + 0*IM;
-      ENDIF;
-      MU[I] := MU[I] - IM*LOG(S2[1]);
-    ELSE;
-      { Stable real-tune branch: MU[I] = ACOS(S2). Lift DA → CD via
-        `+ 0*IM` for assignment to CD-typed MU[I]. }
-      MU_TMP := ACOS(S2[1]) + 0*IM;
-      IF CONS(REAL(MU_TMP)) < 0;
-        MU_TMP := -MU_TMP;
-      ENDIF;
-      IF J < 0;
-        MU_TMP := 2*PI + 0*IM - MU_TMP;
-      ENDIF;
-      MU[I] := MU_TMP;
-    ENDIF;
-
-    CO NOM;
-    MU[I] := MU[I]/(2*PI);
   ENDLOOP;
+
+  IF (LC = 1) AND (ND = 2);
+    LINEAR_TUNES_4D MU;
+  ELSE;
+    DANF MAP MN_LOCAL MA_LOCAL 1 S1_RS 1E-7;
+    NOM := NOC;
+
+    LOOP I 1 ND;
+      S1[1] := REAL(MN_LOCAL[2*I-1]);
+
+      { Strip even-indexed canonical variables (the conjugate momenta of
+        OTHER planes) by plugging 0 for them via DAPLU. }
+      LOOP J 2 TWOND 2;
+        DAPLU S1 J 0 S2;
+        S1[1] := S2[1];
+      ENDLOOP;
+
+      IF ABS(S1[1]) = 0;
+        S1[1] := DA(2*I-1);
+      ENDIF;
+
+      S2[1] := 0*DD[1];
+      CO NOC+1;
+
+      WHILE (ABS(S2[1]) = 0) AND (NOC > 1);
+        CO NOC-1;
+        DADIU 2*I-1 S1 S2;
+      ENDWHILE;
+
+      IF NOC < NOM;
+        CO NOM;
+        LWNTS := LWNTS + 1;
+      ENDIF;
+
+      { Extract sign-encoding coefficient at variable 2*I.  uses
+        `COEF(REAL(MN(2*I-1)), 2*I)` with COSY's right-to-left TRANSPORT id;
+        ROSY's left-to-right id can't address single variables beyond x_1,
+        so we use DER+CONS instead. }
+      J := CONS(DER(2*I, MN_LOCAL[2*I-1]));
+      CO NOC-1;
+
+      IF J = 0;
+        { Hyperbolic-tune branch: J=0 means no DA(2*I) coefficient;
+          the tune is logarithmic.  builds this as
+          `MU(I) - J*LOG(S2)` after IMUNIT promotes J to imaginary
+          unit. Without ROSY's TYPE-overloading we instead compute
+          directly with IM (the global imag-unit CM). }
+        IF CONS(S2[1]) < 0;
+          S2[1] := -S2[1];
+          MU[I] := PI + 0*DD[1] + 0*IM;
+        ELSE;
+          MU[I] := 0*DD[1] + 0*IM;
+        ENDIF;
+        MU[I] := MU[I] - IM*LOG(S2[1]);
+      ELSE;
+        { Stable real-tune branch: MU[I] = ACOS(S2). Lift DA → CD via
+          `+ 0*IM` for assignment to CD-typed MU[I]. }
+        MU_TMP := ACOS(S2[1]) + 0*IM;
+        IF CONS(REAL(MU_TMP)) < 0;
+          MU_TMP := -MU_TMP;
+        ENDIF;
+        IF J < 0;
+          MU_TMP := 2*PI + 0*IM - MU_TMP;
+        ENDIF;
+        MU[I] := MU_TMP;
+      ENDIF;
+
+      CO NOM;
+      MU[I] := MU[I]/(2*PI);
+    ENDLOOP;
+  ENDIF;
 ENDPROCEDURE;
 
 { ----- BDEP: parameter dependence from field dependence
@@ -1558,25 +1658,23 @@ ENDPROCEDURE;
   Matrix-element extraction via DER+CONS (not ME) since ROSY's TRANSPORT
   id encoding is left-to-right (id=K only addresses x_1^K, not x_K).
 
-  ROSY-vs- typing note: 's loose MU holds DA in the
-  decoupled case and silently absorbs CD in the coupled case. ROSY
-  preserves the DA-typed MU and uses an internal CD scratch (MU_CD)
-  for the TS call, then REAL-casts back into MU. A residual-imaginary
-  diagnostic warns if the cast would lose tune-relevant data (signals
-  the user should call TS directly with a CD buffer).                  }
-PROCEDURE TP MU (DA 4);
+  MU is CD-typed, matching GT and TS, so TP preserves the imaginary tune
+  component for hyperbolic / unstable planes instead of lossy-casting
+  back to DA.                                                          }
+PROCEDURE TP MU (CD 4);
   VARIABLE (CD 3) A;
   VARIABLE (CD 3) B;
   VARIABLE (CD 3) G;
   VARIABLE (CD 3) R;
-  VARIABLE (CD 4) MU_GT;
   VARIABLE (DA 8) F;
   VARIABLE (RE) I;
   VARIABLE (RE) K;
   VARIABLE (RE) I1;
   VARIABLE (RE) I2;
   VARIABLE (RE) LC;
+  VARIABLE (CM) IM;
 
+  IMUNIT IM;
   LC := 0;
   LOOP I 1 ND;
     I2 := 2*I;
@@ -1592,39 +1690,27 @@ PROCEDURE TP MU (DA 4);
   ENDLOOP;
 
   IF LC = 0;
-    GT MAP F MU_GT A B G R;
-    LOOP I 1 ND;
-      MU[I] := REAL(MU_GT[I]);
-    ENDLOOP;
+    GT MAP F MU A B G R;
   ELSE;
     { Coupled planes —  path. }
-    VARIABLE (CD 4) MU_CD;
-    VARIABLE (DA 1) BUF_IN;
-    VARIABLE (DA 1) BUF_OUT;
-    VARIABLE (RE)   RES_IMAG;
-    TS MU_CD;
-    RES_IMAG := 0;
+    VARIABLE (DA 1) BUF_IN_RE;
+    VARIABLE (DA 1) BUF_OUT_RE;
+    VARIABLE (DA 1) BUF_IN_IM;
+    VARIABLE (DA 1) BUF_OUT_IM;
+    TS MU;
     LOOP I 1 ND;
-      { Track imaginary residue before lossy cast. }
-      LOOP K 1 TWOND;
-        RES_IMAG := RES_IMAG + ABS(IMAG(MU_CD[I]|K));
-      ENDLOOP;
-      MU[I] := REAL(MU_CD[I]);
       { Strip canonical-pair (amplitude) variables via DAPLU sweep —
-        zero each var K in MU[I], leaving only parameter-dependence. }
+        zero each var K in MU[I], leaving only parameter-dependence.
+        DAPLU is DA-only in ROSY, so strip real and imaginary DA parts
+        separately and then rebuild the CD result. }
       LOOP K 1 TWOND;
-        BUF_IN[1] := MU[I];
-        DAPLU BUF_IN K 0 BUF_OUT;
-        MU[I] := BUF_OUT[1];
+        BUF_IN_RE[1] := REAL(MU[I]);
+        BUF_IN_IM[1] := IMAG(MU[I]);
+        DAPLU BUF_IN_RE K 0 BUF_OUT_RE;
+        DAPLU BUF_IN_IM K 0 BUF_OUT_IM;
+        MU[I] := BUF_OUT_RE[1] + IM*BUF_OUT_IM[1];
       ENDLOOP;
     ENDLOOP;
-    IF RES_IMAG > 1E-9;
-      WRITE 6 ' --- WARNING in TP, LC=1 path discarded';
-      WRITE 6 '     non-trivial imaginary tune residue:';
-      WRITE 6 RES_IMAG;
-      WRITE 6 '     Hyperbolic / unstable plane detected — call TS';
-      WRITE 6 '     directly with a (CD 4) buffer for full information.';
-    ENDIF;
   ENDIF;
 ENDPROCEDURE;
 

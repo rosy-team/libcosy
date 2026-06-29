@@ -29,7 +29,7 @@ INCLUDE 'map_ops.rosy';
   LKC = 0 → use the full kinematic correction (default)
   LKC = 1 → use the linearized version (faster, less accurate at
             large transverse momenta)                                    }
-PROCEDURE DLACT ARR L (RE);
+PROCEDURE DLACT ARR L (DA);
   VARIABLE (DA) LP0PZ;
   LP0PZ := CONS(ETA) + 0*DA(1);
   LP0PZ := (1 + ARR[6])*(2*(1 + ARR[7]) + (1 + ARR[6])*LP0PZ)/(2 + LP0PZ);
@@ -52,7 +52,7 @@ ENDPROCEDURE;
   Propagates the active MAP and the scratch MSC through a drift of length
   L.  additionally calls LOCSET (axis-display offset) and UPDATE
   (graphics + ray flow); both are graphics-only and skipped.             }
-PROCEDURE DL L (RE);
+PROCEDURE DL L (DA);
   IF LUM # 1;
     WRITE 6 ' *** ERROR, call UM before DL';
     QUIT 0;
@@ -60,7 +60,7 @@ PROCEDURE DL L (RE);
   DLACT MAP L;
   UMS;
   DLACT MSC L;
-  LOCSET 0 L 0 L 0 0;
+  LOCSET 0 CONS(L) 0 CONS(L) 0 0;
   DR := 0;
   UPDATE 0 1;
 ENDPROCEDURE;
@@ -74,8 +74,8 @@ ENDPROCEDURE;
   contents. libcosy has no graphics, so PS is purely a state
   marker — useful for users who want to break a long element chain
   into "stations" without actually advancing the map.                    }
-PROCEDURE PS D (RE);
-  DR := D;
+PROCEDURE PS D (DA);
+  DR := CONS(D);
   LOCSET 0 0 0 0 0 0;
   UPDATE 0 0;
 ENDPROCEDURE;

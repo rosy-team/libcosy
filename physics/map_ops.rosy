@@ -62,11 +62,14 @@ PROCEDURE SSNM N (DA 3 3) M (DA 3 3);
 ENDPROCEDURE;
 
 { ----- Matrix-element extraction --------------------------
-  ME(M, I) returns the linear matrix element d MAP[M] / d x_I. This is
-  intentionally indexed by phase-space variable number, not by DAPEE's
-  TRANSPORT exponent id; e.g. ME(1, 2) is the x_2 coefficient of MAP[1]. }
+  ME(M, I) returns the coefficient of MAP[M] addressed by COSY/TRANSPORT
+  notation. For linear elements, ME(1, 2) is the x_2 coefficient of MAP[1].
+  Repeated digits address higher-order terms, e.g. ME(1, 222) is the x_2^3
+  coefficient of MAP[1]. }
 FUNCTION (RE) ME M (RE) I (RE);
-  ME := CONS(DER(I, MAP[M]));
+  VARIABLE (DA 1) XS;
+  XS[1] := MAP[M];
+  DAPEE XS I ME;
 ENDFUNCTION;
 
 { ----- Matrix-element with parameter ----------------------

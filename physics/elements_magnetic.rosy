@@ -49,9 +49,9 @@ INCLUDE 'field_potential.rosy';
     L (RE)  — physical length [m]
     B (DA)  — pole-tip magnetic field [T], allowing PARA-dependent strength
     D (RE)  — pole-tip aperture [m]                                       }
-PROCEDURE MQ L (RE) B (DA) D (RE);
+PROCEDURE MQ L (DA) B (DA) D (DA);
 
-  PROCEDURE MQUAD IAP L (RE) F (DA) AP (RE);
+  PROCEDURE MQUAD IAP L (DA) F (DA) AP (DA);
     VARIABLE (RE) C; VARIABLE (DA) OM1; VARIABLE (DA) OM2;
     VARIABLE (DA) FI; VARIABLE (DA) FP; VARIABLE (DA) N; VARIABLE (DA) OM;
 
@@ -121,8 +121,8 @@ PROCEDURE MQ L (RE) B (DA) D (RE);
       UMS;
       MQUAD MSC L B D;
     ENDIF;
-    LOCSET 0 L 0 L 0 0;
-    DR := D;
+    LOCSET 0 CONS(L) 0 CONS(L) 0 0;
+    DR := CONS(D);
     CE := 'MQ';
     UPDATE 0 1;
   ELSE;
@@ -130,7 +130,7 @@ PROCEDURE MQ L (RE) B (DA) D (RE);
     PPOL[1] := B/D + 0*DD[1];
     MPOL[1] := 2;
     LOFF := 1;
-    FFELE L D 0 1 2 'MQ';
+    FFELE CONS(L) CONS(D) 0 1 2 'MQ';
   ENDIF;
 
 ENDPROCEDURE;
@@ -144,9 +144,9 @@ ENDPROCEDURE;
     L (RE) — physical length [m]
     B (RE) — pole-tip magnetic field [T]
     D (RE) — pole-tip aperture [m]                                       }
-PROCEDURE MH L (RE) B (DA) D (RE);
+PROCEDURE MH L (DA) B (DA) D (DA);
 
-  PROCEDURE MHEXA IAP L (RE) F (DA) AP (RE);
+  PROCEDURE MHEXA IAP L (DA) F (DA) AP (DA);
     VARIABLE (RE) C;
     VARIABLE (DA) X; VARIABLE (DA) XZ; VARIABLE (DA) Y;
     VARIABLE (DA) FP; VARIABLE (DA) FI;
@@ -178,8 +178,8 @@ PROCEDURE MH L (RE) B (DA) D (RE);
       UMS;
       MHEXA MSC L B D;
     ENDIF;
-    LOCSET 0 L 0 L 0 0;
-    DR := D;
+    LOCSET 0 CONS(L) 0 CONS(L) 0 0;
+    DR := CONS(D);
     CE := 'MH';
     UPDATE 0 1;
   ELSE;
@@ -187,7 +187,7 @@ PROCEDURE MH L (RE) B (DA) D (RE);
     PPOL[1] := B/D/D + 0*DD[1];
     MPOL[1] := 3;
     LOFF := 1;
-    FFELE L D 0 1 2 'MH';
+    FFELE CONS(L) CONS(D) 0 1 2 'MH';
   ENDIF;
 
 ENDPROCEDURE;
@@ -197,11 +197,11 @@ ENDPROCEDURE;
   K into the equivalent pole-tip field B = K · χ_m · D^(2n) / D, where n is
   the multipole order. Useful when lattice files specify K1 / K2 directly
   rather than B.                                                          }
-PROCEDURE MQK L (RE) K (DA) D (RE);
+PROCEDURE MQK L (DA) K (DA) D (DA);
   MQ L K*CONS(CHIM)*D+0*DA(1) D;
 ENDPROCEDURE;
 
-PROCEDURE MSK L (RE) K (DA) D (RE);
+PROCEDURE MSK L (DA) K (DA) D (DA);
   MH L K*CONS(CHIM)*D*D D;
 ENDPROCEDURE;
 
@@ -222,33 +222,33 @@ ENDPROCEDURE;
   magnets (e.g. octupole MO with NOC<3), the lazy init of PMM/PEM
   in POTFLD won't have populated the needed entries — user must call
   OV with NO ≥ multipole order.                                       }
-PROCEDURE MO L (RE) B (DA) D (RE);
+PROCEDURE MO L (DA) B (DA) D (DA);
   NPOL := 1;
   PPOL[1] := B/D/D/D + 0*DD[1];
   MPOL[1] := 4;
   LOFF := 1;
-  FFELE L D 0 1 2 'MO';
+  FFELE CONS(L) CONS(D) 0 1 2 'MO';
 ENDPROCEDURE;
 
-PROCEDURE MD L (RE) B (DA) D (RE);
+PROCEDURE MD L (DA) B (DA) D (DA);
   NPOL := 1;
   PPOL[1] := B/D/D/D/D + 0*DD[1];
   MPOL[1] := 5;
   LOFF := 1;
-  FFELE L D 0 1 2 'MD';
+  FFELE CONS(L) CONS(D) 0 1 2 'MD';
 ENDPROCEDURE;
 
-PROCEDURE MZ L (RE) B (DA) D (RE);
+PROCEDURE MZ L (DA) B (DA) D (DA);
   NPOL := 1;
   PPOL[1] := B/D/D/D/D/D + 0*DD[1];
   MPOL[1] := 6;
   LOFF := 1;
-  FFELE L D 0 1 2 'MZ';
+  FFELE CONS(L) CONS(D) 0 1 2 'MZ';
 ENDPROCEDURE;
 
 { M5: 5-pole bundle. Sets quadrupole through dodecapole strengths in
   one call. Cosy.fox L3187-3193.                                       }
-PROCEDURE M5 L (RE) BQ (DA) BH (DA) BO (DA) BD (DA) BZ (DA) D (RE);
+PROCEDURE M5 L (DA) BQ (DA) BH (DA) BO (DA) BD (DA) BZ (DA) D (DA);
   PPOL[1] := BQ/D + 0*DD[1];                MPOL[1] := 2;
   PPOL[2] := BH/D/D + 0*DD[1];              MPOL[2] := 3;
   PPOL[3] := BO/D/D/D + 0*DD[1];            MPOL[3] := 4;
@@ -256,13 +256,13 @@ PROCEDURE M5 L (RE) BQ (DA) BH (DA) BO (DA) BD (DA) BZ (DA) D (RE);
   PPOL[5] := BZ/D/D/D/D/D + 0*DD[1];        MPOL[5] := 6;
   LOFF := 1;
   NPOL := 5;
-  FFELE L D 0 1 2 'M5';
+  FFELE CONS(L) CONS(D) 0 1 2 'M5';
 ENDPROCEDURE;
 
 { MM: arbitrary normal multipole array.
   BA[I] is the I-th multipole strength (I=1 quad, I=2 sext, ...);
   NBA is the number of provided strengths.                            }
-PROCEDURE MM L (RE) BA (DA 5) NBA (RE) D (RE);
+PROCEDURE MM L (DA) BA (DA 5) NBA (RE) D (DA);
   VARIABLE (RE) I;
   VARIABLE (DA) DP;
   DP := 1 + 0*DD[1];
@@ -273,12 +273,12 @@ PROCEDURE MM L (RE) BA (DA 5) NBA (RE) D (RE);
   ENDLOOP;
   LOFF := 1;
   NPOL := NBA;
-  FFELE L D 0 1 2 'MM';
+  FFELE CONS(L) CONS(D) 0 1 2 'MM';
 ENDPROCEDURE;
 
 { MMS: skew multipole — adds skew components on top of MM.
   NB is count of provided pairs; BA is normal strengths, BS is skew.   }
-PROCEDURE MMS L (RE) BA (DA 5) BS (DA 5) NB (RE) D (RE);
+PROCEDURE MMS L (DA) BA (DA 5) BS (DA 5) NB (RE) D (DA);
   VARIABLE (RE) I;
   VARIABLE (DA) DP;
   DP := 1 + 0*DD[1];
@@ -295,40 +295,40 @@ PROCEDURE MMS L (RE) BA (DA 5) BS (DA 5) NB (RE) D (RE);
   ENDLOOP;
   LOFF := 1;
   NPOL := 2*NB;
-  FFELE L D 0 1 2 'MMS';
+  FFELE CONS(L) CONS(D) 0 1 2 'MMS';
 ENDPROCEDURE;
 
 { K-variants: replace the explicit field strengths with integrated K
   values, scaled by χ_m ≈ 1/(B·ρ) for magnetic rigidity normalisation. }
-PROCEDURE MOK L (RE) K (DA) D (RE);
+PROCEDURE MOK L (DA) K (DA) D (DA);
   NPOL := 1;
   PPOL[1] := K*CONS(CHIM) + 0*DD[1];
   MPOL[1] := 4;
   LOFF := 1;
-  FFELE L D 0 1 2 'MOK';
+  FFELE CONS(L) CONS(D) 0 1 2 'MOK';
 ENDPROCEDURE;
 
-PROCEDURE MDK L (RE) K (DA) D (RE);
+PROCEDURE MDK L (DA) K (DA) D (DA);
   NPOL := 1;
   PPOL[1] := K*CONS(CHIM) + 0*DD[1];
   MPOL[1] := 5;
   LOFF := 1;
-  FFELE L D 0 1 2 'MDK';
+  FFELE CONS(L) CONS(D) 0 1 2 'MDK';
 ENDPROCEDURE;
 
-PROCEDURE MZK L (RE) K (DA) D (RE);
+PROCEDURE MZK L (DA) K (DA) D (DA);
   NPOL := 1;
   PPOL[1] := K*CONS(CHIM) + 0*DD[1];
   MPOL[1] := 6;
   LOFF := 1;
-  FFELE L D 0 1 2 'MZK';
+  FFELE CONS(L) CONS(D) 0 1 2 'MZK';
 ENDPROCEDURE;
 
 { ----- K-strength multipole array variants -----
   MMK / MMSK are sister wrappers to MM/MMS that take integrated K
   values scaled by χ_m, mirroring the MOK/MDK/MZK relationship for
   array-of-strengths magnets.                                          }
-PROCEDURE MMK L (RE) BA (DA 5) NBA (RE) D (RE);
+PROCEDURE MMK L (DA) BA (DA 5) NBA (RE) D (DA);
   VARIABLE (RE) I;
   LOOP I 1 NBA;
     PPOL[I] := BA[I]*CONS(CHIM) + 0*DD[1];
@@ -336,18 +336,18 @@ PROCEDURE MMK L (RE) BA (DA 5) NBA (RE) D (RE);
   ENDLOOP;
   LOFF := 1;
   NPOL := NBA;
-  FFELE L D 0 1 2 'MMK';
+  FFELE CONS(L) CONS(D) 0 1 2 'MMK';
 ENDPROCEDURE;
 
 { MMSK: skew-K multipole.  combines a normal-K vector KA with
   an angle vector TA into a single MMS call by computing the skew
   partner BS := KA[I]·sin((I+1)·TA[I]·deg→rad) and rotating KA by
   cos. Mutates KA / TA in place — semantics match .           }
-PROCEDURE MMSK L (RE) KA (DA 5) TA (DA 5) NA (RE) D (RE);
+PROCEDURE MMSK L (DA) KA (DA 5) TA (DA 5) NA (RE) D (DA);
   VARIABLE (RE) I;
-  VARIABLE (RE) DP;
+  VARIABLE (DA) DP;
   VARIABLE (DA) BS;
-  DP := 1;
+  DP := 1 + 0*DD[1];
   LOOP I 1 NA;
     DP := DP*D;
     KA[I] := KA[I]*CONS(CHIM)*DP;
