@@ -906,8 +906,8 @@ PROCEDURE POTFLD X (DA 30) S (RE);
   VARIABLE (DA) P;
   VARIABLE (DA) JPOL_DA;
   VARIABLE (DA) ZERO_DA;
-  VARIABLE (DA 8) ACCT;
   VARIABLE (DA 30) X_LOCAL;
+  VARIABLE (DA 8) ACCT;
   ZERO_DA := 0*DD[1];
   IF LM = 0;
     LM := 1;
@@ -1145,14 +1145,12 @@ PROCEDURE POTFLD X (DA 30) S (RE);
   CO NOC-1;
   IF LCCT = 1;
     { FCCT — concatenate field expressions with the integration state X.
-      : pack the 8 field components into ACCT, run
-      POLVAL with X (transverse phase-space) substituted in, unpack
-      back.  zeros X[2] (momentum slot) before POLVAL and
-      restores after; libcosy uses a local copy to avoid mutation.    }
-    LOOP I 1 TWOND;
+      Pack the 8 field components into ACCT, run POLVAL with the
+      transverse phase-space substituted in, then unpack back.        }
+    LOOP I 1 30;
       X_LOCAL[I] := X[I];
     ENDLOOP;
-    X_LOCAL[2] := 0*DD[1];
+    X_LOCAL[2] := 0*X_LOCAL[2];
     ACCT[1] := EFX; ACCT[2] := EFY; ACCT[3] := EFZ; ACCT[4] := V;
     ACCT[5] := BFX; ACCT[6] := BFY; ACCT[7] := BFZ; ACCT[8] := W;
     POLVAL 1 ACCT 8 X_LOCAL TWOND ACCT 8;
@@ -1352,9 +1350,13 @@ PROCEDURE RK N (RE) X0 (RE) X1 (RE) Y0 (DA 30) H0 (RE) HS (RE) H1 (RE)
   VARIABLE (ST) FN;
   PROCEDURE NORMRK NLOC (RE) X_VEC (DA 30) AX (RE);
     VARIABLE (RE) INORM;
+    VARIABLE (RE) VALNORM;
     AX := 0;
     LOOP INORM 1 NLOC;
-      AX := MAX(AX, WABS(X_VEC[INORM], WAF));
+      VALNORM := WABS(X_VEC[INORM], WAF);
+      IF VALNORM > AX;
+        AX := VALNORM;
+      ENDIF;
     ENDLOOP;
   ENDPROCEDURE;
 
@@ -1535,7 +1537,7 @@ PROCEDURE SDELE S1 (RE) S2 (RE) H1 (RE) H2 (RE) H3 (RE) D_AP (RE);
   MMP[13] := PLOC + 0*DD[1];
   MMP[14] := TLOC + 0*DD[1];
   MMP[15] := VLOC + 0*DD[1];
-  RK 29 S1 S2 MMP H1 H2 H3 EPS EPS*20 RKSCR MMQ ERREST_LOCAL;
+  RK 29 CONS(S1) CONS(S2) MMP CONS(H1) CONS(H2) CONS(H3) EPS EPS*20 RKSCR MMQ ERREST_LOCAL;
   LOOP I 1 8;
     MSC[I] := MMQ[I];
   ENDLOOP;
