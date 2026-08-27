@@ -62,9 +62,10 @@ PROCEDURE SSNM N (DA 3 3) M (DA 3 3);
 ENDPROCEDURE;
 
 { ----- Matrix-element extraction --------------------------
-  ME(M, I) returns the I-th monomial coefficient of MAP[M]. Like COEF,
-  the input is a single DA pulled from a DA-array slot; ROSY's DAPEE
-  expects a `Vec<DA>` so we wrap into a one-element scratch.            }
+  ME(M, I) returns the coefficient of MAP[M] addressed by COSY/TRANSPORT
+  notation. For linear elements, ME(1, 2) is the x_2 coefficient of MAP[1].
+  Repeated digits address higher-order terms, e.g. ME(1, 222) is the x_2^3
+  coefficient of MAP[1]. }
 FUNCTION (RE) ME M (RE) I (RE);
   VARIABLE (DA 1) XS;
   XS[1] := MAP[M];
@@ -1096,7 +1097,7 @@ ENDPROCEDURE;
   the enclosing scope, but inlining it sidesteps the closure entirely.
   CC stands in for 's C (avoiding the C / C_2 / C_3 namespace
   pollution from libcosy global declarations).                            }
-PROCEDURE GT MM (DA 8) F (DA 8) MU (DA 4) ALPHA (DA 4) BETA (DA 4) GAMMA (DA 4) R (DA 4);
+PROCEDURE GT MM (DA 8) F (DA 8) MU (CD 4) ALPHA (CD 4) BETA (CD 4) GAMMA (CD 4) R (CD 4);
   VARIABLE (RE) A;
   VARIABLE (RE) B;
   VARIABLE (RE) CC;
@@ -1111,7 +1112,9 @@ PROCEDURE GT MM (DA 8) F (DA 8) MU (DA 4) ALPHA (DA 4) BETA (DA 4) GAMMA (DA 4) 
   VARIABLE (RE) J;
   VARIABLE (RE) K;
   VARIABLE (RE) L;
+  VARIABLE (CM) IM;
 
+  IMUNIT IM;
   FM MM F M IER;
 
   LOOP J 1 ND;
@@ -1139,14 +1142,14 @@ PROCEDURE GT MM (DA 8) F (DA 8) MU (DA 4) ALPHA (DA 4) BETA (DA 4) GAMMA (DA 4) 
           the b=0, c=0 case; otherwise the map can't be represented in
           Twiss form (would need a Jordan block).                       }
         IF (ABS(B) = 0) AND (ABS(CC) = 0);
-          R[J]     := SQRT(DET) + 0*DD[1];
-          ALPHA[J] := 0*DD[1];
-          BETA[J]  := 1 + 0*DD[1];
-          GAMMA[J] := 1 + 0*DD[1];
+          R[J]     := SQRT(DET) + 0*DD[1] + 0*IM;
+          ALPHA[J] := 0*DD[1] + 0*IM;
+          BETA[J]  := 1 + 0*DD[1] + 0*IM;
+          GAMMA[J] := 1 + 0*DD[1] + 0*IM;
           IF COSMU < 0;
-            MU[J] := 0.5 + 0*DD[1];
+            MU[J] := 0.5 + 0*DD[1] + 0*IM;
           ELSE;
-            MU[J] := 0*DD[1];
+            MU[J] := 0*DD[1] + 0*IM;
           ENDIF;
         ELSE;
           WRITE 6 ' *** ERROR in GT, unrepresentable parabolic map';
@@ -1156,87 +1159,79 @@ PROCEDURE GT MM (DA 8) F (DA 8) MU (DA 4) ALPHA (DA 4) BETA (DA 4) GAMMA (DA 4) 
       ELSEIF ABS_COSMU < 1;
         { Stable rotation: the bread-and-butter
           ring case. COSMU is the rotation cosine, MU is the tune. }
-        R[J] := SQRT(DET) + 0*DD[1];
+        R[J] := SQRT(DET) + 0*DD[1] + 0*IM;
         MU_J := ACOS(COSMU);
         IF B < 0;
           MU_J := 2*PI - MU_J;
         ENDIF;
         SINMU := SIN(MU_J);
-        DEN := CONS(R[J])*SINMU;
-        MU[J]    := MU_J/(2*PI) + 0*DD[1];
-        ALPHA[J] := (A - D)/(2*DEN) + 0*DD[1];
-        BETA[J]  := B/DEN + 0*DD[1];
-        GAMMA[J] := -CC/DEN + 0*DD[1];
+        DEN := CONS(REAL(R[J]))*SINMU;
+        MU[J]    := MU_J/(2*PI) + 0*DD[1] + 0*IM;
+        ALPHA[J] := (A - D)/(2*DEN) + 0*DD[1] + 0*IM;
+        BETA[J]  := B/DEN + 0*DD[1] + 0*IM;
+        GAMMA[J] := -CC/DEN + 0*DD[1] + 0*IM;
       ELSE;
         { Hyperbolic (DET > 0, |COSMU| > 1). MU = DEN + i·LOG(COSMU+SINMU)
           per ; the real part is DEN ∈ {0, π} depending on sign
           of COSMU. ALPHA / BETA / GAMMA are purely imaginary and so
-          collapse to 0 under the DA-typed real-cast that libcosy's
-          GT signature requires. Callers needing the imaginary tune
-          residue (the actual hyperbolic growth rate) should call TS
-          directly with a CD output buffer. R is set to √DET as a
-          best-effort real magnitude. }
+          are carried as CD values, matching COSY's dynamically typed
+          output. }
         VARIABLE (RE) DEN_HYP;
         VARIABLE (RE) SINMU_HYP;
         VARIABLE (RE) IMAG_RES_HYP;
+        VARIABLE (RE) K_HYP;
+        VARIABLE (CM) SINMU_HYP_CM;
         IF COSMU < 0;
           DEN_HYP := PI;
           SINMU_HYP := SQRT(SQR(-COSMU) - 1);
+          K_HYP := -1;
         ELSE;
           DEN_HYP := 0;
           SINMU_HYP := SQRT(SQR(COSMU) - 1);
+          K_HYP := 1;
         ENDIF;
         IMAG_RES_HYP := LOG(ABS(COSMU) + SINMU_HYP);
-        R[J]     := SQRT(DET) + 0*DD[1];
-        MU[J]    := DEN_HYP/(2*PI) + 0*DD[1];
-        ALPHA[J] := 0*DD[1];
-        BETA[J]  := 0*DD[1];
-        GAMMA[J] := 0*DD[1];
-        WRITE 6 ' --- WARNING in GT, hyperbolic plane J =';
-        WRITE 6 J;
-        WRITE 6 '     real-cast loses imag tune residue =';
-        WRITE 6 IMAG_RES_HYP;
-        WRITE 6 '     ALPHA / BETA / GAMMA pinned to 0; call TS for full info.';
+        R[J]     := SQRT(DET) + 0*DD[1] + 0*IM;
+        MU[J]    := (DEN_HYP + IM*IMAG_RES_HYP)/(2*PI) + 0*DD[1];
+        SINMU_HYP_CM := K_HYP*IM*SINMU_HYP;
+        ALPHA[J] := (A - D)/(2*R[J]*SINMU_HYP_CM);
+        BETA[J]  := B/(R[J]*SINMU_HYP_CM);
+        GAMMA[J] := -CC/(R[J]*SINMU_HYP_CM);
       ENDIF;
     ELSEIF DET = 0;
       IF (ABS(A) = 0) AND (ABS(B) = 0) AND (ABS(CC) = 0) AND (ABS(D) = 0);
-        R[J]     := 0*DD[1];
-        MU[J]    := 0*DD[1];
-        ALPHA[J] := 0*DD[1];
-        BETA[J]  := 1 + 0*DD[1];
-        GAMMA[J] := 1 + 0*DD[1];
+        R[J]     := 0*DD[1] + 0*IM;
+        MU[J]    := 0*DD[1] + 0*IM;
+        ALPHA[J] := 0*DD[1] + 0*IM;
+        BETA[J]  := 1 + 0*DD[1] + 0*IM;
+        GAMMA[J] := 1 + 0*DD[1] + 0*IM;
       ELSE;
         WRITE 6 ' *** ERROR in GT, DET=0';
         QUIT 0;
       ENDIF;
     ELSE;
-      { DET < 0: instability. R = i·√(-DET) is purely imag, MU = π/2
-        + K·i·LOG(SINMU+COSMU) per . Real-cast extracts only
-        the π/2 tune component; the K·LOG growth-rate residue is
-        reported as a diagnostic. ALPHA / BETA / GAMMA collapse to 0
-        for the same reason as hyperbolic. }
+      { DET < 0: instability. R = i·√(-DET), MU = π/2
+        + K·i·LOG(SINMU+COSMU) per COSY. }
       VARIABLE (RE) DEN_INS;
       VARIABLE (RE) COSMU_INS;
       VARIABLE (RE) SINMU_INS;
       VARIABLE (RE) IMAG_RES_INS;
+      VARIABLE (RE) K_INS;
       DEN_INS := SQRT(-DET);
       COSMU_INS := (A + D)/2/DEN_INS;
       IF COSMU_INS < 0;
         SINMU_INS := SQRT(SQR(-COSMU_INS) + 1);
+        K_INS := -1;
       ELSE;
         SINMU_INS := SQRT(SQR(COSMU_INS) + 1);
+        K_INS := 1;
       ENDIF;
       IMAG_RES_INS := LOG(ABS(COSMU_INS) + SINMU_INS);
-      R[J]     := DEN_INS + 0*DD[1];
-      MU[J]    := 0.25 + 0*DD[1];
-      ALPHA[J] := 0*DD[1];
-      BETA[J]  := 0*DD[1];
-      GAMMA[J] := 0*DD[1];
-      WRITE 6 ' --- WARNING in GT, unstable plane J =';
-      WRITE 6 J;
-      WRITE 6 '     real-cast pins MU to π/2 (= 0.25 turn); imag growth residue =';
-      WRITE 6 IMAG_RES_INS;
-      WRITE 6 '     ALPHA / BETA / GAMMA pinned to 0; call TS for full info.';
+      R[J]     := IM*DEN_INS + 0*DD[1];
+      MU[J]    := (PI/2 + K_INS*IM*IMAG_RES_INS)/(2*PI) + 0*DD[1];
+      ALPHA[J] := (A - D)/(2*R[J]*SINMU_INS);
+      BETA[J]  := B/(R[J]*SINMU_INS);
+      GAMMA[J] := -CC/(R[J]*SINMU_INS);
     ENDIF;
   ENDLOOP;
 ENDPROCEDURE;
