@@ -65,7 +65,10 @@ ENDPROCEDURE;
   ME(M, I) returns the coefficient of MAP[M] addressed by COSY/TRANSPORT
   notation. For linear elements, ME(1, 2) is the x_2 coefficient of MAP[1].
   Repeated digits address higher-order terms, e.g. ME(1, 222) is the x_2^3
-  coefficient of MAP[1]. }
+  coefficient of MAP[1].
+  CONS(DER(I, MAP[M])) is only equivalent for linear I=1..NV. DAPEE is
+  required for TRANSPORT ids like 222, and linear ME already matches
+  (MQ 0.2 0.1 0.05: ME11/12/21/22 = 0.973148 / 0.198207 / -0.267310 / 0.973148). }
 FUNCTION (RE) ME M (RE) I (RE);
   VARIABLE (DA 1) XS;
   XS[1] := MAP[M];
