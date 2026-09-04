@@ -33,8 +33,8 @@ ENDFUNCTION;
 
   X1, Y1 are lifted into DA via `+ 0*DD[1]` so the running-power loop
   multiplies cleanly with the DA argument. The coefficient table P
-  stays DA so RF can carry PARA-dependent voltages.            }
-FUNCTION (DA) POLY_DA X (DA) Y (DA) P (DA 3 3) IS_ (RE);
+  stays RE (glass / measured tables). RF PARA voltages use POLY_DADA. }
+FUNCTION (DA) POLY_DA X (DA) Y (DA) P (RE 3 3) IS_ (RE);
   VARIABLE (RE) I; VARIABLE (RE) J;
   VARIABLE (DA) X1; VARIABLE (DA) Y1;
   POLY_DA := 0*DD[1];
@@ -43,6 +43,22 @@ FUNCTION (DA) POLY_DA X (DA) Y (DA) P (DA 3 3) IS_ (RE);
     Y1 := 1 + 0*DD[1];
     LOOP J 1 IS_+1;
       POLY_DA := POLY_DA + P[I, J]*X1*Y1;
+      Y1 := Y*Y1;
+    ENDLOOP;
+    X1 := X*X1;
+  ENDLOOP;
+ENDFUNCTION;
+
+{ Same as POLY_DA with a DA coefficient table, for PARA-dependent RF voltages. }
+FUNCTION (DA) POLY_DADA X (DA) Y (DA) P (DA 3 3) IS_ (RE);
+  VARIABLE (RE) I; VARIABLE (RE) J;
+  VARIABLE (DA) X1; VARIABLE (DA) Y1;
+  POLY_DADA := 0*DD[1];
+  X1 := 1 + 0*DD[1];
+  LOOP I 1 IS_+1;
+    Y1 := 1 + 0*DD[1];
+    LOOP J 1 IS_+1;
+      POLY_DADA := POLY_DADA + P[I, J]*X1*Y1;
       Y1 := Y*Y1;
     ENDLOOP;
     X1 := X*X1;
