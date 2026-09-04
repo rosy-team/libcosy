@@ -367,10 +367,10 @@ ENDPROCEDURE;
   amp-meter units), used by CMR/CMSI/CMST/CMSTP for current-driven
   field strengths.                                                       }
 
-PROCEDURE CMR I (DA) D (RE);
+PROCEDURE CMR I (DA) D (DA);
   VARIABLE (RE) MU;
   VARIABLE (RE) D_AP;
-  D_AP := D;
+  D_AP := CONS(D);
   MU := 1.2566E-6;
   CE := 'CMR';
   NPOL := 1;
@@ -381,9 +381,9 @@ PROCEDURE CMR I (DA) D (RE);
   DSDED 5E4*D_AP 0 1E-4*D_AP 1E4*D_AP 1E4*D_AP D_AP;
 ENDPROCEDURE;
 
-PROCEDURE CMG B (DA) D (RE);
+PROCEDURE CMG B (DA) D (DA);
   VARIABLE (RE) D_AP;
-  D_AP := D;
+  D_AP := CONS(D);
   NPOL := 1;
   PPOL[1] := B + 0*DD[1];
   MPOL[1] := 20;
@@ -393,9 +393,9 @@ PROCEDURE CMG B (DA) D (RE);
   DSDED 5*D_AP 0 D_AP/40 D_AP 10*D_AP D_AP;
 ENDPROCEDURE;
 
-PROCEDURE CML B (DA) D (RE);
+PROCEDURE CML B (DA) D (DA);
   VARIABLE (RE) D_AP;
-  D_AP := D;
+  D_AP := CONS(D);
   NPOL := 1;
   PPOL[1] := B + 0*DD[1];
   MPOL[1] := 20;
@@ -405,10 +405,10 @@ PROCEDURE CML B (DA) D (RE);
   DSDED 5E4*D_AP 0 1E-4*D_AP 1E4*D_AP 1E4*D_AP D_AP;
 ENDPROCEDURE;
 
-PROCEDURE CMSI I (DA) N (DA) D (RE) L (RE);
+PROCEDURE CMSI I (DA) N (DA) D (DA) L (DA);
   VARIABLE (RE) MU;
   VARIABLE (RE) D_AP;
-  D_AP := D;
+  D_AP := CONS(D);
   MU := 1.2566E-6;
   CE := 'CMSI';
   NPOL := 1;
@@ -417,12 +417,12 @@ PROCEDURE CMSI I (DA) N (DA) D (RE) L (RE);
   MPOL[1] := 20;
   NSDP := 10;
   LOFF := 1;
-  DSDED 200*D_AP L 1E-4*D_AP D_AP 3*D_AP D_AP;
+  DSDED 200*D_AP CONS(L) 1E-4*D_AP D_AP 3*D_AP D_AP;
 ENDPROCEDURE;
 
-PROCEDURE CMS B (DA) D (RE) L (RE);
+PROCEDURE CMS B (DA) D (DA) L (DA);
   VARIABLE (RE) D_AP;
-  D_AP := D;
+  D_AP := CONS(D);
   NPOL := 1;
   PPOL[1] := B*D_AP/2/TANH(L/2/D_AP) + 0*DD[1];
   PPOL[2] := L + 0*DD[1];
@@ -430,7 +430,7 @@ PROCEDURE CMS B (DA) D (RE) L (RE);
   NSDP := 8;
   LOFF := 1;
   CE := 'CMS';
-  DSDED 25*D_AP L 1E-4*D_AP D_AP 3*D_AP D_AP;
+  DSDED 25*D_AP CONS(L) 1E-4*D_AP D_AP 3*D_AP D_AP;
 ENDPROCEDURE;
 
 { CMSP: a slice [S1, S2] of an otherwise-full magnetic solenoid of
@@ -439,7 +439,7 @@ ENDPROCEDURE;
   Pads the SDELE integration with 20·D backward/forward drifts when
   S1≈0 or S2≈L (entrance/exit slices) so the entry/exit fringe is
   fully captured.                                                         }
-PROCEDURE CMSP B (DA) D (RE) L (RE) S1 (RE) S2 (RE);
+PROCEDURE CMSP B (DA) D (DA) L (DA) S1 (DA) S2 (DA);
   VARIABLE (RE) D_AP;
   VARIABLE (RE) DS1;
   VARIABLE (RE) DS2;
@@ -447,7 +447,7 @@ PROCEDURE CMSP B (DA) D (RE) L (RE) S1 (RE) S2 (RE);
   VARIABLE (RE) H2_STEP;
   VARIABLE (DA 8) MS_BUF;
   VARIABLE (DA 3 3) SM_BUF;
-  D_AP := D;
+  D_AP := CONS(D);
   NPOL := 1;
   PPOL[1] := B*D_AP/2/TANH(L/2/D_AP) + 0*DD[1];
   PPOL[2] := L + 0*DD[1];
@@ -459,39 +459,39 @@ PROCEDURE CMSP B (DA) D (RE) L (RE) S1 (RE) S2 (RE);
   SNM MSC MS_BUF;
   SSNM SSCR SM_BUF;
   DS1 := 0;
-  IF ABS(S1) < 1E-5;
-    DS1 := L/2 - 20*D_AP;
+  IF ABS(CONS(S1)) < 1E-5;
+    DS1 := CONS(L)/2 - 20*D_AP;
   ENDIF;
-  IF ABS(S1) < 1E-5;
-    DLACT MS_BUF DS1;
+  IF ABS(CONS(S1)) < 1E-5;
+    DLACT MS_BUF DS1 + 0*DA(1);
   ELSE;
-    DS1 := S1;
+    DS1 := CONS(S1);
   ENDIF;
-  IF ABS(S2 - L) < 1E-5;
-    DS2 := 20*D_AP + L/2;
+  IF ABS(CONS(S2) - CONS(L)) < 1E-5;
+    DS2 := 20*D_AP + CONS(L)/2;
   ELSE;
-    DS2 := S2;
+    DS2 := CONS(S2);
   ENDIF;
   LOCSET 0 DS1 0 DS1 0 0;
-  H2_STEP := (20*D_AP - L/2)/100;
+  H2_STEP := (20*D_AP - CONS(L)/2)/100;
   SDELE DS1 DS2 1E-4*D_AP H2_STEP 3*D_AP D_AP;
   UPDATEMAP MSC MS_BUF MSC SSCR SM_BUF SSCR;
-  IF ABS(S2 - L) < 1E-5;
-    BACKDRIFT := L/2 - 20*D_AP;
-    DLACT MSC BACKDRIFT;
+  IF ABS(CONS(S2) - CONS(L)) < 1E-5;
+    BACKDRIFT := CONS(L)/2 - 20*D_AP;
+    DLACT MSC BACKDRIFT + 0*DA(1);
     ZLOC := ZLOC - BACKDRIFT;
   ENDIF;
-  SLOC := S2 - S1;
+  SLOC := CONS(S2) - CONS(S1);
   UPDATE 1 1;
 ENDPROCEDURE;
 
-PROCEDURE CMST NI (DA) R1 (RE) R2 (RE) L (RE);
+PROCEDURE CMST NI (DA) R1 (DA) R2 (DA) L (DA);
   VARIABLE (RE) MU;
   MU := 1.2566E-6;
-  IF (R1 < 0) OR (R1 = 0);
+  IF (CONS(R1) < 0) OR (CONS(R1) = 0);
     WRITE 6 ' *** ERROR in CMST, R1 < 0 or R1 = 0';
     QUIT 0;
-  ELSEIF (R2 < R1) OR (R2 = R1);
+  ELSEIF (CONS(R2) < CONS(R1)) OR (CONS(R2) = CONS(R1));
     WRITE 6 ' *** ERROR in CMST, R2 < R1 or R2 = R1';
     QUIT 0;
   ENDIF;
@@ -504,15 +504,15 @@ PROCEDURE CMST NI (DA) R1 (RE) R2 (RE) L (RE);
   MPOL[1] := 20;
   NSDP := 13;
   LOFF := 1;
-  DSDED 200*R2 L 1E-4*R1 R1 3*R1 R1;
+  DSDED 200*CONS(R2) CONS(L) 1E-4*CONS(R1) CONS(R1) 3*CONS(R1) CONS(R1);
 ENDPROCEDURE;
 
 { CMSTP: superposition of N thick magnetic solenoids. Each piece IS
   contributes (NI[IS], L[IS], R1[IS], R2[IS]) starting at X[IS]; the
   piece data lands in MFD[IS, 1..5] for NSDP=14 to consume. The S1/S2
   slice arguments cap the integration window, mirroring CMSP.         }
-PROCEDURE CMSTP N (RE) NI (DA 30) R1 (RE 30) R2 (RE 30) L (RE 30)
-                X (RE 30) S1 (RE) S2 (RE);
+PROCEDURE CMSTP N (RE) NI (DA 30) R1 (DA 30) R2 (DA 30) L (DA 30)
+                X (DA 30) S1 (DA) S2 (DA);
   VARIABLE (RE) MU;
   VARIABLE (RE) DMIN;
   VARIABLE (RE) IS_GRID;
@@ -521,8 +521,8 @@ PROCEDURE CMSTP N (RE) NI (DA 30) R1 (RE 30) R2 (RE 30) L (RE 30)
   DMIN := 1E8;
   PPOL[1] := N + 0*DD[1];
   LOOP IS_GRID 1 N;
-    DMIN := MIN(DMIN, R1[IS_GRID]);
-    IF (R2[IS_GRID] < R1[IS_GRID]) OR (R2[IS_GRID] = R1[IS_GRID]) OR (L[IS_GRID] < 0);
+    DMIN := MIN(DMIN, CONS(R1[IS_GRID]));
+    IF (CONS(R2[IS_GRID]) < CONS(R1[IS_GRID])) OR (CONS(R2[IS_GRID]) = CONS(R1[IS_GRID])) OR (CONS(L[IS_GRID]) < 0);
       PPOL[1] := -1 + 0*DD[1];
     ENDIF;
     MFD[IS_GRID, 1] := MU*NI[IS_GRID]/4/(R2[IS_GRID] - R1[IS_GRID]) + 0*DD[1];
@@ -542,8 +542,8 @@ PROCEDURE CMSTP N (RE) NI (DA 30) R1 (RE 30) R2 (RE 30) L (RE 30)
   MPOL[1] := 20;
   NSDP := 14;
   LOFF := 1;
-  LOCSET 0 S1 0 S1 0 0;
-  SDELE S1 S2 1E-4*DMIN DMIN 3*DMIN DMIN;
+  LOCSET 0 CONS(S1) 0 CONS(S1) 0 0;
+  SDELE CONS(S1) CONS(S2) 1E-4*DMIN DMIN 3*DMIN DMIN;
   UPDATE 1 1;
 ENDPROCEDURE;
 
@@ -563,18 +563,18 @@ ENDPROCEDURE;
     DS    : s-grid spacing [m]
     SIGMA : Gaussian-kernel width in grid units (analogue of MF's SIGMA)
     D     : aperture / characteristic length [m]                       }
-PROCEDURE MGE NP (RE) A (RE 30 30) NS (RE) DS (RE) SIGMA (RE) D (RE);
+PROCEDURE MGE NP (RE) A (RE 30 30) NS (RE) DS (RE) SIGMA (RE) D (DA);
   VARIABLE (RE) I;
   VARIABLE (RE) IS_GRID;
   VARIABLE (RE) S2;
   VARIABLE (RE) D_AP;
-  VARIABLE (RE) DPOW;
-  D_AP := D;
+  VARIABLE (DA) DPOW;
+  D_AP := CONS(D);
   LOOP I 1 NP;
     MPOL[I] := I + 1;
-    DPOW := 1;
+    DPOW := 1 + 0*DA(1);
     LOOP IS_GRID 1 I;
-      DPOW := DPOW*D_AP;
+      DPOW := DPOW*D;
     ENDLOOP;
     LOOP IS_GRID 1 NS;
       MFD[I, IS_GRID] := A[I, IS_GRID]/DPOW + 0*DD[1];

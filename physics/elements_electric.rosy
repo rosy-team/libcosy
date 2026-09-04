@@ -51,10 +51,10 @@ INCLUDE 'field_potential.rosy';
 
   Pre-conditions: RP must have been called (LRP=1) and the new-energy
   check (CONS(E0)<1E-10 → "RF too high") guards against runaway. }
-PROCEDURE RF V (RE 3 3) N (RE) W (DA) PHI (DA) D (DA);
+PROCEDURE RF V (DA 3 3) N (RE) W (DA) PHI (DA) D (DA);
   VARIABLE (RE) PP0;
   VARIABLE (RE) EE0;
-  VARIABLE (RE) VV0;
+  VARIABLE (DA) VV0;
   VARIABLE (RE) PH;
 
   PROCEDURE RFM M (DA 8);
@@ -79,8 +79,8 @@ PROCEDURE RF V (RE 3 3) N (RE) W (DA) PHI (DA) D (DA);
   PP0 := CONS(P0);
   EE0 := CONS(E0);
   PH := CONS(PHI)*DEGRAD;
-  VV0 := POLY(0, 0, V, N)*SIN(PH)*0.001*CONS(Z0);
-  RP CONS(E0)+VV0+0*DA(1) CONS(M0)+0*DA(1) CONS(Z0)+0*DA(1);
+  VV0 := POLY_DA(0*DA(1), 0*DA(1), V, N)*SIN(PH)*0.001*CONS(Z0);
+  RP CONS(E0)+VV0 CONS(M0)+0*DA(1) CONS(Z0)+0*DA(1);
   IF CONS(E0) < 1E-10;
     WRITE 6 ' *** RF TOO HIGH';
     QUIT 0;
